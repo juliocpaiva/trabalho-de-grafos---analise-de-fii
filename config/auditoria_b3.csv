@@ -1,0 +1,12 @@
+ticker,date,close_b3_brl,close_yahoo_brl,source
+RECR11.SA,2025-11-03,78.01,55.312469,https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D03112025.ZIP
+RECR11.SA,2025-11-04,78.20,55.447189,https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D04112025.ZIP
+RECR11.SA,2025-11-05,78.36,55.560638,https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D05112025.ZIP
+RECR11.SA,2025-11-06,78.66,55.773350,https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D06112025.ZIP
+RECT11.SA,2025-11-03,34.46,26.351770,https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D03112025.ZIP
+RECT11.SA,2025-11-04,33.86,25.892946,https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D04112025.ZIP
+RECT11.SA,2025-11-05,34.00,26.000006,https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D05112025.ZIP
+RECT11.SA,2025-11-06,34.00,26.000006,https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D06112025.ZIP
+XPML11.SA,2026-01-14,110.40,1.067998,https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D14012026.ZIP
+XPML11.SA,2026-01-15,110.51,1.069062,https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D15012026.ZIP
+XPML11.SA,2026-01-16,110.00,1.064128,https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_D16012026.ZIP
