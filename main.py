@@ -92,6 +92,8 @@ def main():
             parametros = Settings(cutoff="2025-11-14", tau=args.limiar, shock_segment="Shoppings")
             resumo = run(cache, saida, parametros, quarantine="config/quarentena_precos.csv")
             print(f"Carteiras: {resumo['portfolios']}. Choque: {resumo['shock']['status']}.")
+            comparacao = resumo["comparacao_modelos"]
+            print(f"Comparação entre modelos: {comparacao['status']} ({comparacao['compared_funds']} FIIs).")
             print(f"Resultados completos em {saida}.")
         else:
             analisar(cache, args.saida or Path("outputs/simples"), args.limiar)

@@ -94,6 +94,12 @@ def test_offline_run_exports_auditable_outputs(cache):
     assert summary["kruskal"]["edges"] == 3 and summary["temporal"]["common_assets"] == 4
     assert summary["portfolios"] == "avaliada"
     assert nx.is_tree(nx.read_graphml(root / "kruskal.graphml"))
+    comparison = summary["comparacao_modelos"]
+    assert comparison["compared_funds"] == 4 and comparison["pares_comparados"] == 6
+    comparison_path = root / "comparacao_modelos"
+    assert set(pd.read_csv(comparison_path / "comparacao.csv").modelo) == {"pearson", "composto"}
+    assert len(pd.read_csv(comparison_path / "kruskal_composto.csv")) == 3
+    assert set(nx.read_graphml(comparison_path / "rede_composto.graphml")) == {"T1", "T2", "T3", "T4"}
     assert pd.read_csv(root / "pairs.csv").rho.count() == 6
     assert len(pd.read_csv(root / "sensitivity.csv")) == 15
     assert pd.read_csv(root / "portfolio_metrics.csv").days.tolist() == [25, 25]

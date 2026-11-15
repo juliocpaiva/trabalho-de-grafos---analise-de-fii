@@ -15,7 +15,7 @@ Abra o terminal do VS Code em `D:\fii` e rode:
 
 `coletar.py` baixa preços ajustados via yfinance e informes da CVM. `main.py` usa os dados salvos em `data/coleta_api` ou o cache de referência em `data/cache` se a coleta ainda não foi feita. Com um cache disponível, você pode abrir o terminal e executar só `main.py`, inclusive offline.
 
-Para rodar também os estudos de carteiras, sensibilidade e choques, execute `.\.venv\Scripts\python.exe main.py --experimentos`. Os resultados completos vão para `outputs/experimentos`.
+Para comparar o peso de Pearson com o peso sugerido na consultoria e rodar os estudos de carteiras, sensibilidade e choques, execute `.\.venv\Scripts\python.exe main.py --experimentos`. Os resultados completos vão para `outputs/experimentos`. Em `comparacao_modelos/`, veja `comparacao.csv` para o resumo, `pares.csv` para as parcelas de cada peso e `caso_entre_segmentos.csv` para o exemplo ao longo de duas janelas.
 
 A análise calcula retornos e correlações, agrupa os FIIs por Louvain e usa Kruskal para ligar os fundos com a menor soma de distâncias. As saídas em `outputs/simples` incluem a lista das arestas selecionadas, a matriz de correlações, o perfil dos fundos e dois gráficos. Edite `config/amostra.csv` para mudar os FIIs ou rode `main.py --limiar 0.45` para mudar o corte de correlação.
 
@@ -66,6 +66,7 @@ Os arquivos Python ficam lado a lado na raiz, como no trabalho de referência.
 | `grafo_base.py` | Calcula Pearson, monta o grafo e calcula centralidades. |
 | `algo_mst.py` | Implementa Kruskal com união de conjuntos. |
 | `algo_louvain.py` | Calcula comunidades e modularidade. |
+| `comparacao_modelos.py` | Compara os dois grafos, as comunidades e as árvores na mesma amostra. |
 | `experimentos.py` e `carteiras_choques.py` | Executam os estudos adicionais. |
 | `visualizacao.py` | Gera os gráficos. |
 | `fii_network.py` | Mantém os comandos opcionais da versão anterior. |

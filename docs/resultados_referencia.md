@@ -10,6 +10,10 @@ Janela observada: 14/11/2024 a 13/11/2026 (496 sessões). A formação termina e
 | Estabilidade temporal | Entre as janelas, ARI 0,008, Jaccard das arestas 0,256 e correlação entre os valores de Pearson de 0,641. O número de arestas passou de 172 para 554 com os 40 fundos comuns. Isso limita a interpretação de grupos como características permanentes dos fundos. |
 | Choque | Shoppings apresentou 25 eventos pelo percentil de 5% (corte de −1,134%); 13 coincidem com as datas avaliáveis das duas carteiras. Nesses 13 dias, a média diária foi de −1,54% para A e −1,19% para B. Os valores descrevem co-movimento histórico. |
 
+Na comparação sugerida na consultoria, os dois modelos usam **39 FIIs e 741 pares**. ABCP11 ficou fora desse recorte por falta de segmento e patrimônio no registro disponível. Com o mesmo limiar de 0,35, o grafo de Pearson tem 374 arestas (74,9% entre segmentos) e o composto tem 512 (65,6% entre segmentos). Cada modelo formou cinco comunidades, com ARI de 0,036 entre as partições. O peso composto, que recompensa coincidência de segmento e patrimônio, mudou a organização do grafo. A diferença no número de arestas não mede melhora de previsão.
+
+No exemplo escolhido pela maior correlação entre segmentos, HGLG11 consta como Multicategoria e XPLG11 como Logística nos informes usados. O Pearson passou de 0,547 na formação para 0,658 na avaliação. O peso composto da janela inteira foi 0,556, formado por 0,356 de Pearson, zero de segmento e 0,200 por estarem ambos na faixa de R$ 1 bilhão ou mais. A decomposição fica em `outputs/experimentos/comparacao_modelos/caso_entre_segmentos.csv`.
+
 | Carteira / cenário | Sessões comuns | Correlação média | Volatilidade anual | Retorno acumulado | Drawdown máximo |
 |---|---:|---:|---:|---:|---:|
 | A — base | 237 | 0,484 | 11,80% | −1,26% | −13,62% |

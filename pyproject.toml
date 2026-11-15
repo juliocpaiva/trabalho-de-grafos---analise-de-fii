@@ -22,7 +22,7 @@ fii-network = "fii_network:main"
 
 [tool.setuptools]
 py-modules = [
-  "algo_louvain", "algo_mst", "carteiras_choques", "coletar", "experimentos",
+  "algo_louvain", "algo_mst", "carteiras_choques", "coletar", "comparacao_modelos", "experimentos",
   "fii_network", "fonte_yfinance", "grafo_base", "main", "visualizacao",
 ]
 

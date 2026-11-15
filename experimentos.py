@@ -18,6 +18,7 @@ import grafo_base as graph
 import visualizacao as plots
 from algo_louvain import communities
 from algo_mst import kruskal
+from comparacao_modelos import compare_models
 
 
 @dataclass(frozen=True)
@@ -256,6 +257,13 @@ def run(cache, output, settings, figures=True, quarantine=None):
                "graph": {**graph.topology(g), "communities": members.nunique(), "modularity": mod},
                "kruskal": tree, "comparison": comparison, "temporal": temporal,
                "portfolios": portfolio_status, "shock": stress, "limitations": limitations}
+    # Compara as duas definições de peso no mesmo recorte de fundos com
+    # atributos disponíveis. As carteiras acima preservam o modelo de referência.
+    summary["comparacao_modelos"] = compare_models(corr, overlap, profile, temporal_pairs,
+        output / "comparacao_modelos", settings, figures)
+    summary["comparacao_modelos"]["pesos"] = dict(zip(
+        ("pearson_positivo", "mesmo_segmento", "mesma_faixa"), graph.COMPOUND_WEIGHTS))
+    summary["comparacao_modelos"]["limites_faixas_brl"] = graph.PROPERTY_BANDS_BRL
     _write_json(output / "run.json", summary)
     if figures:
         plots.heatmap(corr, output, "matriz_correlacao", "Correlação de Pearson dos retornos diários", corr=True)

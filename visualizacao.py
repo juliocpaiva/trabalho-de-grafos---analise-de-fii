@@ -1,9 +1,13 @@
 """Figuras acadêmicas estáticas; os CSVs preservam os valores completos."""
+from collections import defaultdict
+from math import ceil, sqrt
+
 import matplotlib
 
 # O modo Agg permite salvar PNGs pelo terminal sem abrir uma janela.
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.patches import FancyBboxPatch
 import networkx as nx
 import numpy as np
 
@@ -30,8 +34,111 @@ def heatmap(table, root, name, title, corr=False):
     save(fig, root, name)
 
 
+def _visible_edges(g):
+    """Mantém todas as arestas de redes esparsas e destaca as fortes nas densas."""
+    if g.number_of_edges() <= 2 * len(g):
+        return list(g.edges)
+
+    # A união das escolhas de cada fundo preserva ao menos um vizinho para
+    # todo vértice conectado. Empates usam o ticker para repetir o desenho.
+    selected = set()
+    for node in g:
+        peers = sorted(g[node], key=lambda peer: (-g[node][peer]["weight"], peer))
+        selected.update(tuple(sorted((node, peer))) for peer in peers[:2])
+    return sorted(selected)
+
+
+def _similarity_network(g, membership, root, name, title):
+    """Posiciona os vértices em blocos com espaço reservado para cada ticker."""
+    palette = ("#176b79", "#604899", "#9b4c1a", "#385e36", "#843e60", "#35568a")
+    groups, isolates = defaultdict(list), []
+    for ticker in sorted(g):
+        if g.degree(ticker):
+            groups[int(membership[ticker])].append(ticker)
+        else:
+            isolates.append(ticker)
+
+    columns = min(3, max(1, len(groups)))
+    width = 5.35
+    panels = []
+    positions = {}
+    y = 0.0
+    entries = sorted(groups.items())
+    for first in range(0, len(entries), columns):
+        row = entries[first:first + columns]
+        counts = [min(5, max(4, ceil(sqrt(len(nodes))))) for _, nodes in row]
+        height = 1.12 + .86 * max(ceil(len(nodes) / count) for (_, nodes), count in zip(row, counts))
+        for col, ((group, nodes), count) in enumerate(zip(row, counts)):
+            x = col * width
+            color = palette[(group - 1) % len(palette)]
+            panels.append((x, y, width - .27, height, f"Comunidade {group}", nodes, color))
+            spacing = (width - .27) / count
+            for i, ticker in enumerate(nodes):
+                positions[ticker] = (x + (i % count + .5) * spacing, y + 1.28 + (i // count) * .86)
+        y += height + .36
+
+    if isolates:
+        count = columns * 5
+        height = 1.12 + .86 * ceil(len(isolates) / count)
+        box_width = columns * width - .27
+        panels.append((0, y, box_width, height, "Isolados", isolates, "#586779"))
+        for i, ticker in enumerate(isolates):
+            positions[ticker] = ((i % count + .5) * box_width / count, y + 1.28 + (i // count) * .86)
+        y += height + .36
+
+    height_inches = 1.8 + .76 * max(y, 2)
+    fig = plt.figure(figsize=(max(8.5, 4.5 * columns), height_inches), facecolor="#f4f7fa")
+    header, footer = 1.0, .68
+    ax = fig.add_axes([.04, footer / height_inches, .92, 1 - (header + footer) / height_inches])
+    ax.set(xlim=(-.15, columns * width), ylim=(max(y, 2), -.14))
+    ax.set_axis_off()
+    for x, top, box_width, box_height, label, nodes, color in panels:
+        ax.add_patch(FancyBboxPatch((x, top), box_width, box_height,
+                     boxstyle="round,pad=0.03,rounding_size=0.15", facecolor="white",
+                     edgecolor="#d8e2eb", linewidth=1.0, zorder=0))
+        ax.text(x + .20, top + .40, label, color=color, fontsize=11, fontweight="bold", va="center")
+        ax.text(x + box_width - .20, top + .40, f"{len(nodes)} FIIs", ha="right",
+                va="center", color="#4a5b6b", fontsize=9)
+
+    display = _visible_edges(g)
+    within = [(a, b) for a, b in display if membership[a] == membership[b]]
+    across = [(a, b) for a, b in display if membership[a] != membership[b]]
+    # Primeiro as arestas, depois os tickers com fundo opaco. Assim os
+    # nomes permanecem legíveis mesmo nas ligações entre comunidades.
+    for edges, color, alpha, style in (
+        (within, "#537d8a", .38, "solid"), (across, "#607695", .25, "dashed")
+    ):
+        if edges:
+            nx.draw_networkx_edges(g, positions, edgelist=edges, ax=ax, edge_color=color,
+                                   alpha=alpha, style=style, width=.9)
+    for _, _, _, _, _, nodes, color in panels:
+        for ticker in nodes:
+            x, top = positions[ticker]
+            ax.text(x, top, ticker.removesuffix(".SA"), va="center", ha="center", zorder=3,
+                    fontsize=8.5, fontweight="normal", color="#142737",
+                    bbox=dict(boxstyle="round,pad=.37", fc="white", ec=color, lw=1.0))
+
+    fig.text(.04, 1 - .25 / height_inches, title, fontsize=19, fontweight="bold",
+             color="#142737", va="top")
+    threshold = f"   ·   Limiar {g.graph['tau']:.2f}".replace(".", ",")
+    fig.text(.04, 1 - .66 / height_inches,
+             f"{len(g)} FIIs   ·   {g.number_of_edges()} arestas   ·   "
+             f"{membership.nunique()} comunidades{threshold}", fontsize=10.5, color="#455a6b", va="top")
+    note = "Traço contínuo dentro da comunidade e tracejado entre comunidades."
+    if len(display) < g.number_of_edges():
+        note = (f"Exibidas {len(display)} de {g.number_of_edges()} arestas, pela união das duas mais fortes por FII."
+                "\nTracejado liga comunidades diferentes. As tabelas contêm todas as arestas e seus pesos.")
+    elif not display:
+        note = "Nenhum par atingiu o limiar de similaridade."
+    fig.text(.04, .29 / height_inches, note, va="center", fontsize=9, color="#455a6b")
+    save(fig, root, name)
+
+
 def network(g, membership, root, name, title, seed):
     """Desenha a rede ou floresta com os nós coloridos por comunidade."""
+    if "tau" in g.graph:
+        _similarity_network(g, membership, root, name, title)
+        return
     # A semente fixa o desenho. Posição na imagem ajuda a leitura, e as
     # distâncias do algoritmo ficam na tabela de arestas.
     fig, ax = plt.subplots(figsize=(11, 8))
@@ -46,6 +153,19 @@ def network(g, membership, root, name, title, seed):
     ax.set_title(title + "\nCores: comunidades Louvain; a cor pode se repetir acima de 20 grupos")
     ax.set_axis_off()
     save(fig, root, name)
+
+
+def pair_periods(case, root):
+    """Mostra o Pearson do mesmo par nas janelas de formação e avaliação."""
+    fig, ax = plt.subplots(figsize=(6, 4))
+    values = [case["rho_formation"], case["rho_test"]]
+    bars = ax.bar(["Formação", "Avaliação"], values, color=["#606b91", "#176b79"])
+    ax.axhline(0, color="#333", linewidth=.7)
+    ax.bar_label(bars, fmt="%.3f", padding=3)
+    a, b = (case[k].removesuffix(".SA") for k in ("a", "b"))
+    ax.set(title=f"{a} × {b} em duas janelas", ylabel="Correlação de Pearson",
+           ylim=(-1.15, 1.15))
+    save(fig, root, "caso_entre_segmentos")
 
 
 def experiments(root, sensitivity, portfolio, shocks, central, temporal):

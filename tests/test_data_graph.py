@@ -116,3 +116,28 @@ def test_quality_explains_non_trading_and_constant_funds():
     assert q.index[q.eligible].tolist() == ["ok"]
     assert "baixa frequência" in q.loc["sparse", "exclusion"]
     assert "sem variação" in q.loc["constant", "exclusion"]
+
+
+def test_compound_similarity_breaks_down_weights_and_preserves_missing_data():
+    names = ["A", "B", "C", "D", "E"]
+    corr = pd.DataFrame([
+        [1, .60, -.50, .90, float("nan")],
+        [.60, 1, .40, .90, .32],
+        [-.50, .40, 1, .90, .70],
+        [.90, .90, .90, 1, .90],
+        [float("nan"), .32, .70, .90, 1],
+    ], index=names, columns=names)
+    profile = pd.DataFrame({
+        "segment": ["Shoppings", "Shoppings", "Escritórios", "Sem classificação", "Logística"],
+        "net_assets": [100_000_000, 499_000_000, 500_000_000, 200_000_000, 200_000_000],
+    }, index=names)
+
+    scores, pairs = graph.compound_similarity(corr, profile)
+    assert list(scores.columns) == ["A", "B", "C", "E"]
+    assert scores.at["A", "B"] == scores.at["B", "A"] == pytest.approx(.76)
+    assert scores.at["A", "C"] == 0
+    assert pd.isna(scores.at["A", "E"])
+    assert scores.at["B", "E"] == pytest.approx(.392)
+    ab = pairs.set_index(["a", "b"]).loc[("A", "B")]
+    assert ab[["parte_pearson", "parte_segmento", "parte_patrimonio"]].tolist() == pytest.approx([.36, .20, .20])
+    assert ab["faixa_a"] == ab["faixa_b"] == 2

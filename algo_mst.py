@@ -41,14 +41,16 @@ class DisjointSets:
 def kruskal(corr):
     """Retorna a árvore ou floresta, as arestas escolhidas e um resumo.
 
-    A entrada é a matriz de Pearson. Quanto maior a correlação, menor a
-    distância dada por sqrt(2 * (1 - rho)). A ordenação das E arestas
-    candidatas custa O(E log E), depois de examinar os pares de fundos.
+    A entrada reúne similaridades por par, como Pearson ou o peso composto.
+    Quanto maior o peso, menor o custo dado por sqrt(2 * (1 - peso)).
+    A ordenação das E arestas candidatas custa O(E log E), depois de
+    examinar os pares de fundos. A coluna rho mantém o nome histórico
+    da saída de Pearson. A comparação renomeia essa coluna para peso.
     """
     f = nx.Graph()
     f.add_nodes_from(sorted(corr.columns))
-    # Pares sem correlação estimável ficam fora. Cada candidato carrega
-    # a distância usada na ordenação e o rho original para a tabela final.
+    # Pares sem peso estimável ficam fora. Cada candidato carrega o custo
+    # usado na ordenação e o valor original para a tabela final.
     candidates = []
     for a, b in combinations(f.nodes, 2):
         rho = corr.loc[a, b]
