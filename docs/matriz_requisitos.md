@@ -1,5 +1,7 @@
 # Matriz de rastreabilidade — SMAC03, Cenário 1
 
+> Registro do escopo original, conferido em 15/11/2026. Para o estado atual em relação aos dez itens do PDF enviado pelo grupo, consulte o [checklist comentado](estado_checklist.md). “Verificado” nesta matriz não significa que Spearman, modelo inverso ou E1–E4 estejam concluídos. Para localizar entradas e resultados, consulte o [mapa dos arquivos](mapa_arquivos.md).
+
 Fonte oficial: Diretrizes do Projeto SMAC03 2026.2, versão local (1), pp. 1–3 e 6, conferida em 15/11/2026. As páginas 4–5 dão orientações para a introdução; as pp. 7–10 referem-se aos outros cenários. RF01–RF10 são identificadores do briefing, não numeração do enunciado.
 
 | ID / requisito | Origem | Interpretação técnica | Entrega responsável | Validação prevista | Status em 15/11/2026 |

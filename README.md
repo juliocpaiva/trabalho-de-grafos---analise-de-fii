@@ -1,74 +1,112 @@
-# SMAC03 — Rede de similaridade entre FIIs
+# Rede de FIIs — comece aqui
 
-Protótipo em Python para o Cenário 1 de Grafos (UNIFEI, 2026.2). Investiga se correlações de retornos revelam concentrações que não aparecem na divisão por segmentos.
+Protótipo SMAC03, Cenário 1 de Grafos, UNIFEI 2026.2. Investiga se correlações entre retornos de FIIs revelam concentrações que a classificação por segmento não mostra.
 
-O grafo principal liga fundos com correlação positiva acima de um limiar. Louvain detecta comunidades nessa rede. Kruskal extrai uma estrutura mínima de um segundo grafo, que usa todos os pares com correlação estimável. A aplicação também compara duas carteiras em um período posterior ao da seleção e mede como elas se comportaram em dias de queda de um segmento.
+**Versão 1: implementação parcial em relação ao checklist do grupo.** Navegação revisada em 18/11/2026. Já existem coleta, Pearson, comunidades na rede limiarizada e árvore de Kruskal. Spearman, peso inverso da distância e o protocolo completo E1–E4 ainda estão pendentes.
 
-## Rodar os dois programas
+## O que você procura?
 
-Abra o terminal do VS Code em `D:\fii` e rode:
+| Quero… | Abra |
+|---|---|
+| Saber o que está desenvolvido, parcial ou pendente no PDF | [Checklist comentado, etapas 1–10](docs/estado_checklist.md) |
+| Entender o que cada arquivo recebe, faz e retorna | [Mapa dos arquivos e das saídas](docs/mapa_arquivos.md) |
+| Ver resultados completos nesta máquina | [outputs/experimentos/](outputs/experimentos/) e seu [run.json](outputs/experimentos/run.json) |
+| Entender fórmulas, fontes e decisões | [Metodologia](docs/metodologia.md) |
+| Ler a interpretação dos resultados da versão 1 | [Resultados de referência](docs/resultados_referencia.md) |
+| Conferir as diretrizes registradas no projeto | [Matriz original de requisitos](docs/matriz_requisitos.md) |
+| Apresentar ou dividir tarefas | [Roteiro](docs/roteiro_demonstracao.md) · [Responsabilidades](docs/responsabilidades.md) |
+
+## Onde está cada etapa do checklist?
+
+| Etapa | Arquivos principais | Estado |
+|---|---|---|
+| [1. Seleção dos FIIs](docs/estado_checklist.md#etapa-1) | `config/amostra.csv`, `fonte_yfinance.py` | Parcial: falta procedência oficial da lista e validação cadastral integral |
+| [2. Coleta histórica](docs/estado_checklist.md#etapa-2) | `coletar.py`, `fonte_yfinance.py` | Desenvolvido; depende da disponibilidade das fontes |
+| [3. Indicadores](docs/estado_checklist.md#etapa-3) | `fonte_yfinance.py`, `carteiras_choques.py` | Parcial: faltam retorno médio e drawdown por FII, beta IFIX e giro médio |
+| [4. Correlações](docs/estado_checklist.md#etapa-4) | `grafo_base.py` | Parcial: Pearson pronto; Spearman pendente |
+| [5. Grafos e pesos](docs/estado_checklist.md#etapa-5) | `grafo_base.py`, `algo_mst.py` | Parcial: faltam os dois grafos completos do checklist |
+| [6. Louvain direto](docs/estado_checklist.md#etapa-6) | `algo_louvain.py` | Parcial: usa rede limiarizada; faltam protocolo completo, tempo e memória |
+| [7. Kruskal + Louvain](docs/estado_checklist.md#etapa-7) | `algo_mst.py` | Parcial: Kruskal pronto; Louvain na árvore pendente |
+| [8. Comparação E1–E4](docs/estado_checklist.md#etapa-8) | `comparacao_modelos.py`, `experimentos.py` | Parcial: comparação atual é Pearson/composto; E1–E4 não concluídos |
+| [9. Visualizações](docs/estado_checklist.md#etapa-9) | `visualizacao.py` | Parcial: figuras de Pearson, rede e árvore disponíveis |
+| [10. Análise acadêmica](docs/estado_checklist.md#etapa-10) | `docs/` | Parcial: notas e metodologia prontas; relatório e conclusões finais pendentes |
+
+Cada etapa tem subitens, evidências e limites no checklist comentado. O peso composto da consultoria **não é o modelo inverso da distância** solicitado no PDF. As cores da árvore usam as comunidades da rede; não demonstram Louvain executado na árvore.
+
+## Rodar pelo VS Code
+
+Abra a pasta `D:\fii`. Em **Terminal → Executar Tarefa…**, escolha:
+
+| Tarefa | Resultado |
+|---|---|
+| `FIIs: 1 - Análise rápida (offline)` | 5 CSVs e 2 gráficos em `outputs/simples/` |
+| `FIIs: 2 - Análise completa da versão 1 (offline)` | Tabelas, grafos, figuras, carteiras e comparação Pearson/composto em `outputs/experimentos/` |
+| `FIIs: 3 - Consultar um FII nos resultados completos` | Pede ticker e lê perfil/pares em `outputs/experimentos/`; execute a tarefa 2 antes se necessário |
+| `FIIs: 4 - Verificar testes` | Suíte existente com dados sintéticos |
+| `FIIs: 5 - Coletar dados (requer internet)` | Baixa dados para `data/coleta_api/`; dispensável para analisar cache existente |
+
+O menu **Executar e Depurar (F5)** oferece as duas análises. Os atalhos usam a `.venv` e a raiz do projeto. As tarefas offline usam explicitamente `data/cache/`, o snapshot local de referência. Caso não exista, rode a coleta e use `data/coleta_api/` no comando ou ajuste o atalho.
+
+### Pelo terminal
+
+Na raiz do projeto, com o ambiente instalado:
 
 ```powershell
-.\.venv\Scripts\python.exe coletar.py
-.\.venv\Scripts\python.exe main.py
+# Visão rápida usando o snapshot local
+.\.venv\Scripts\python.exe main.py --cache data/cache
+
+# Todos os resultados implementados na versão 1
+.\.venv\Scripts\python.exe main.py --experimentos --cache data/cache
+
+# Consultar os resultados completos sem recalcular
+.\.venv\Scripts\python.exe -m fii_network inspect VISC11 --top 5 --output outputs/experimentos
 ```
 
-`coletar.py` baixa preços ajustados via yfinance e informes da CVM. `main.py` usa os dados salvos em `data/coleta_api` ou o cache de referência em `data/cache` se a coleta ainda não foi feita. Com um cache disponível, você pode abrir o terminal e executar só `main.py`, inclusive offline.
+Sem `--cache`, `main.py` prefere `data/coleta_api/` quando há manifesto; caso contrário usa `data/cache/`. O simples gera `correlacoes.csv`; o completo gera `correlations.csv`. O [catálogo de saídas](docs/mapa_arquivos.md) explica cada arquivo.
 
-Para comparar o peso de Pearson com o peso sugerido na consultoria e rodar os estudos de carteiras, sensibilidade e choques, execute `.\.venv\Scripts\python.exe main.py --experimentos`. Os resultados completos vão para `outputs/experimentos`. Em `comparacao_modelos/`, veja `comparacao.csv` para o resumo, `pares.csv` para as parcelas de cada peso e `caso_entre_segmentos.csv` para o exemplo ao longo de duas janelas.
-
-A análise calcula retornos e correlações, agrupa os FIIs por Louvain e usa Kruskal para ligar os fundos com a menor soma de distâncias. As saídas em `outputs/simples` incluem a lista das arestas selecionadas, a matriz de correlações, o perfil dos fundos e dois gráficos. Edite `config/amostra.csv` para mudar os FIIs ou rode `main.py --limiar 0.45` para mudar o corte de correlação.
-
-## Experimentos adicionais
-
-Use Python 3.11 ou superior. Para repetir com o ambiente já montado neste workspace, comece pela linha que define `$fiiPython`.
+Para uma instalação nova, use Python 3.11 ou superior:
 
 ```powershell
 python -m venv .venv
-$fiiPython = '.\.venv\Scripts\python.exe'
-& $fiiPython -m pip install -e '.[test]'
-& $fiiPython -m pytest -q
+.\.venv\Scripts\python.exe -m pip install -e '.[test]'
+.\.venv\Scripts\python.exe coletar.py
+.\.venv\Scripts\python.exe main.py --experimentos
 ```
 
-A coleta exige internet. A execução de referência já possui cache local, portanto pode começar em `analyze` e rodar sem conexão.
+Caches e resultados estão no `.gitignore` e não acompanham um clone. Os links para saídas só funcionam após geração local. Rodar no mesmo destino pode substituir arquivos; preserve outras configurações em pastas diferentes.
+
+### Ajustar parâmetros ou preservar outra execução
 
 ```powershell
-& $fiiPython -m fii_network collect --start 2024-11-14 --end 2026-11-14
-& $fiiPython -m fii_network analyze --cutoff 2025-11-14 --shock-segment Shoppings --quarantine config/quarentena_precos.csv
-& $fiiPython -m fii_network inspect VISC11 --top 5
-& $fiiPython -m fii_network analyze --shock-segment Shoppings --quarantine config/quarentena_precos.csv --min-turnover-brl 500000 --output outputs/liquidez
+.\.venv\Scripts\python.exe main.py --cache data/cache --limiar 0.45 --saida outputs/limiar_045
+.\.venv\Scripts\python.exe -m fii_network analyze --cache data/cache --output outputs/liquidez_revisao --min-turnover-brl 500000 --shock-segment Shoppings --quarantine config/quarentena_precos.csv
+.\.venv\Scripts\python.exe -m fii_network analyze --help
 ```
 
-O término da coleta é exclusivo. Nas duas execuções de referência, `--quarantine` aplica os intervalos confirmados por [cotações oficiais da B3](https://www.b3.com.br/pt_br/market-data-e-indices/servicos-de-dados/market-data/historico/mercado-a-vista/cotacoes-historicas/). O CSV `config/auditoria_b3.csv` guarda as 11 discrepâncias e as fontes; o cache bruto é mantido. Use `--help` em cada comando para ajustar amostra, janela, elegibilidade, limiar, resolução, semente, tamanho da carteira e corte de choque. Use outro diretório de saída para cada configuração que quiser preservar.
+`main.py` aplica a quarentena configurada no projeto; na CLI completa, informe `--quarantine` explicitamente. `--experimentos` significa a análise completa **da versão 1**, não a conclusão de E1–E4.
 
-## Onde encontrar cada resultado
+## Organização das pastas
 
-| Caminho                                                                                          | Conteúdo                                                                                        |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| `data/cache/`                                                                                  | Preços, volumes, eventos, informes e manifesto de coleta com SHA-256.                           |
-| `outputs/principal/run.json`                                                                   | Configuração, versões, cobertura, métricas e limitações.                                   |
-| `outputs/principal/{quality,fund_profiles,pairs,price_quarantine}.csv`                         | Elegibilidade, fundamentos e consulta de pares.                                                  |
-| `outputs/principal/{correlations,overlap,segment_communities,community_pair_correlations}.csv` | Pearson com sinal, datas em comum, composição e correlações entre comunidades.               |
-| `outputs/principal/{similarity,kruskal}.graphml`                                               | Grafos com atributos, importáveis em ferramentas como Gephi.                                    |
-| `outputs/principal/{portfolio_metrics,portfolios,portfolio_returns}.csv`                       | Métricas, composição e retornos das carteiras.                                                |
-| `outputs/principal/{shock_dates,shock_exposures,sensitivity,temporal_pairs}.csv`               | Choques, sensibilidade e estabilidade entre janelas.                                             |
-| `outputs/principal/*.png`                                                                      | Nove figuras: correlações, dois grafos, composição, centralidade e experimentos.             |
-| `docs/`                                                                                        | Matriz, metodologia, resultados de referência, roteiro de demonstração e registro de papéis. |
+```text
+fii/
+  README.md             ← entrada para o grupo
+  docs/                 ← checklist, mapa dos arquivos, metodologia e resultados
+  config/               ← amostra e auditoria/quarentena de preços
+  data/                 ← dados coletados e snapshot local, ignorados pelo Git
+  outputs/              ← resultados gerados, ignorados pelo Git
+    simples/            ← revisão rápida
+    experimentos/       ← revisão completa recomendada
+    principal/          ← execução anterior da CLI
+    liquidez/           ← referência com filtro financeiro
+  tests/                ← testes existentes
+  .vscode/              ← tarefas e configurações de execução
+  *.py                  ← entradas e módulos, detalhados no mapa dos arquivos
+```
 
-## Código
+Os nomes dos módulos foram preservados. Consulte o [mapa dos arquivos](docs/mapa_arquivos.md) para distinguir programas de entrada e módulos auxiliares.
 
-Os arquivos Python ficam lado a lado na raiz, como no trabalho de referência.
+## Fontes e documentação técnica
 
-| Arquivo | Responsabilidade |
-|---|---|
-| `main.py` | Lê o cache e chama as etapas da análise. |
-| `coletar.py` e `fonte_yfinance.py` | Baixam e preparam dados do Yahoo Finance e da CVM. |
-| `grafo_base.py` | Calcula Pearson, monta o grafo e calcula centralidades. |
-| `algo_mst.py` | Implementa Kruskal com união de conjuntos. |
-| `algo_louvain.py` | Calcula comunidades e modularidade. |
-| `comparacao_modelos.py` | Compara os dois grafos, as comunidades e as árvores na mesma amostra. |
-| `experimentos.py` e `carteiras_choques.py` | Executam os estudos adicionais. |
-| `visualizacao.py` | Gera os gráficos. |
-| `fii_network.py` | Mantém os comandos opcionais da versão anterior. |
+Preços e eventos: Yahoo Finance via yfinance. Segmentos e fundamentos: informes mensais da CVM. Evidências de preços contestados: `config/auditoria_b3.csv`; intervalos aplicados: `config/quarentena_precos.csv`.
 
-Fontes de preços e eventos: [Yahoo Finance por yfinance](https://ranaroussi.github.io/yfinance/reference/yfinance.price_history.html). Fonte de classificação e fundamentos: [Informes Mensais Estruturados da CVM](https://dados.cvm.gov.br/dataset/fii-doc-inf_mensal). `config/amostra.csv` documenta o universo de conveniência e o vínculo ticker–CNPJ. A coleta tenta primeiro yfinance e, se necessário, consulta o endpoint de séries do mesmo provedor. O manifesto guarda falhas e origem por ticker. Há suporte a `--fundamentals arquivo.csv`; use `ticker,reference,published,source` e, quando disponíveis, `cnpj,segment,name,net_assets,book_per_share,monthly_yield`. Cada linha é um registro completo desse fundo na data indicada; campos ausentes permanecem vazios. `monthly_yield` está em fração. Um CSV de calendário com coluna `date` pode ser informado com `--calendar`.
+O [guia técnico anterior](docs/guia_tecnico_v1.md) preserva os detalhes da primeira versão, incluindo formatos de dados complementares. Para o estado atual em relação ao pedido do grupo, use o [checklist comentado](docs/estado_checklist.md).
