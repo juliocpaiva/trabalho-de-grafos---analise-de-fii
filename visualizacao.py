@@ -51,6 +51,7 @@ def _visible_edges(g):
 def _similarity_network(g, membership, root, name, title):
     """Posiciona os vértices em blocos com espaço reservado para cada ticker."""
     palette = ("#176b79", "#604899", "#9b4c1a", "#385e36", "#843e60", "#35568a")
+    relation_color = "#c34f68" if g.graph.get("relation") == "inversa" else "#176b79"
     groups, isolates = defaultdict(list), []
     for ticker in sorted(g):
         if g.degree(ticker):
@@ -106,7 +107,7 @@ def _similarity_network(g, membership, root, name, title):
     # Primeiro as arestas, depois os tickers com fundo opaco. Assim os
     # nomes permanecem legíveis mesmo nas ligações entre comunidades.
     for edges, color, alpha, style in (
-        (within, "#537d8a", .38, "solid"), (across, "#607695", .25, "dashed")
+        (within, relation_color, .42, "solid"), (across, "#607695", .25, "dashed")
     ):
         if edges:
             nx.draw_networkx_edges(g, positions, edgelist=edges, ax=ax, edge_color=color,
@@ -120,7 +121,8 @@ def _similarity_network(g, membership, root, name, title):
 
     fig.text(.04, 1 - .25 / height_inches, title, fontsize=19, fontweight="bold",
              color="#142737", va="top")
-    threshold = f"   ·   Limiar {g.graph['tau']:.2f}".replace(".", ",")
+    relation = "inversa" if g.graph.get("relation") == "inversa" else "direta"
+    threshold = f"   ·   Limiar |ρ| {g.graph['tau']:.2f} · relação {relation}".replace(".", ",")
     fig.text(.04, 1 - .66 / height_inches,
              f"{len(g)} FIIs   ·   {g.number_of_edges()} arestas   ·   "
              f"{membership.nunique()} comunidades{threshold}", fontsize=10.5, color="#455a6b", va="top")

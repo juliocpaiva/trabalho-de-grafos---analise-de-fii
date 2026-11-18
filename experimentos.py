@@ -13,6 +13,7 @@ import pandas as pd
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 
 import carteiras_choques as analysis
+import dashboard
 import fonte_yfinance as data
 import grafo_base as graph
 import visualizacao as plots
@@ -136,12 +137,17 @@ def run(cache, output, settings, figures=True, quarantine=None):
     names = sorted(q.index[q.eligible])
     if len(names) < 2:
         raise ValueError("Menos de dois fundos elegíveis; confira as séries, a janela e os limites.")
-    corr, overlap, g, members, mod = _partition(returns[names], settings)
+    corr, overlap = graph.correlation(returns[names], settings.min_overlap)
+    g, inverse_g = graph.signed_similarity(corr, settings.tau, overlap)
+    members, mod = communities(g, settings.resolution, settings.seed)
+    inverse_members, inverse_mod = communities(inverse_g, settings.resolution, settings.seed)
     # A rede descritiva usa a fotografia final. A montagem da carteira
     # recebe apenas a fotografia da data de corte.
     full_meta = data.snapshot(fundamentals, universe.ticker.tolist(), returns.index.max(), quote)
     train_meta = data.snapshot(fundamentals, universe.ticker.tolist(), settings.cutoff, quote)
-    profile = full_meta.loc[names].join(q).join(members).join(graph.centralities(g))
+    profile = (full_meta.loc[names].join(q).join(members)
+               .join(inverse_members.rename("inverse_community")).join(graph.centralities(g)))
+    profile["direct_community"] = profile["community"]
     forest, tree_edges, tree = kruskal(corr)
     # Toda floresta acíclica com V vértices e c componentes tem V - c arestas.
     if not tree["acyclic"] or tree["edges"] != tree["vertices"] - tree["components"]:
@@ -156,9 +162,17 @@ def run(cache, output, settings, figures=True, quarantine=None):
         pair_table.a_segment.ne("Sem classificação") & pair_table.b_segment.ne("Sem classificação"))
     pair_table["same_community"] = pair_table.a_community.eq(pair_table.b_community)
     pair_table["in_similarity_graph"] = pair_table.rho.ge(settings.tau)
+    pair_table["in_inverse_graph"] = pair_table.rho.le(-settings.tau)
+    pair_table["relationship"] = pair_table.rho.map(
+        lambda value: ("direta" if value >= settings.tau else
+                       "inversa" if value <= -settings.tau else "abaixo do limiar")
+        if pd.notna(value) else "indisponível")
     pair_table["p_to_book_gap"] = (pair_table.a_p_to_book - pair_table.b_p_to_book).abs()
     pair_table["monthly_yield_gap"] = (pair_table.a_monthly_yield - pair_table.b_monthly_yield).abs()
     pair_table = pair_table.sort_values("rho", ascending=False, kind="stable")
+    signed_pair_table = graph.signed_pairs(corr, overlap, settings.tau)
+    direct_pair_table = signed_pair_table[signed_pair_table.relation.eq("direta")]
+    inverse_pair_table = signed_pair_table[signed_pair_table.relation.eq("inversa")]
     known = profile[profile.segment.ne("Sem classificação")]
     cross = pd.crosstab(profile.segment, profile.community)
     comparison = {
@@ -220,6 +234,10 @@ def run(cache, output, settings, figures=True, quarantine=None):
               "quality_test": qtest, "formation_metadata": train_meta, "fund_profiles": profile,
               "returns": returns[names], "correlations": corr, "overlap": overlap,
               "pairs": pair_table, "segment_communities": cross, "communities": grouped,
+              "direct_communities": members.rename("community"),
+              "inverse_communities": inverse_members.rename("community"),
+              "signed_edges": signed_pair_table, "direct_edges": direct_pair_table,
+              "inverse_edges": inverse_pair_table,
               "community_pair_correlations": group_corr, "centralities": graph.centralities(g),
               "similarity_edges": pair_table[pair_table.in_similarity_graph],
               "kruskal_edges": tree_edges, "sensitivity": sensitivity,
@@ -231,7 +249,8 @@ def run(cache, output, settings, figures=True, quarantine=None):
     # que identifica a linha. Tabelas de pares já trazem isso nas colunas.
     indexed = {"quality", "quality_formation", "quality_test", "formation_metadata", "fund_profiles",
                "returns", "correlations", "overlap", "segment_communities", "communities",
-               "centralities", "temporal_members", "portfolio_returns", "shock_dates"}
+               "direct_communities", "inverse_communities", "centralities", "temporal_members",
+               "portfolio_returns", "shock_dates"}
     for name, table in tables.items():
         if table is not None:
             table.to_csv(output / f"{name}.csv", index=name in indexed)
@@ -239,11 +258,13 @@ def run(cache, output, settings, figures=True, quarantine=None):
     # Coloca os mesmos atributos dos fundos nos dois GraphML para
     # permitir a inspeção dos vértices em programas como Gephi.
     for t in g:
-        clean = {k: v for k, v in profile.loc[t, ["segment", "community", "strength", "betweenness",
+        clean = {k: v for k, v in profile.loc[t, ["segment", "community", "direct_community",
+                                                "inverse_community", "strength", "betweenness",
                                                 "volatility", "p_to_book"]].items() if pd.notna(v)}
-        for target in (g, forest):
+        for target in (g, inverse_g, forest):
             target.nodes[t].update({k: _json_value(v) for k, v in clean.items()})
     nx.write_graphml(g, output / "similarity.graphml")
+    nx.write_graphml(inverse_g, output / "inverse_similarity.graphml")
     nx.write_graphml(forest, output / "kruskal.graphml")
     summary = {"settings": asdict(settings), "source": collected,
                "versions": {p: version(p) for p in ["numpy", "pandas", "networkx", "matplotlib", "scikit-learn", "yfinance", "requests"]},
@@ -255,6 +276,11 @@ def run(cache, output, settings, figures=True, quarantine=None):
                           "formation_last": str(train.index.max().date()), "test_first": str(test.index.min().date()),
                           "formation_days": len(train), "test_days": len(test)},
                "graph": {**graph.topology(g), "communities": members.nunique(), "modularity": mod},
+               "signed_communities": {
+                   "direct": {**graph.topology(g), "communities": members.nunique(), "modularity": mod},
+                   "inverse": {**graph.topology(inverse_g), "communities": inverse_members.nunique(),
+                               "modularity": inverse_mod},
+               },
                "kruskal": tree, "comparison": comparison, "temporal": temporal,
                "portfolios": portfolio_status, "shock": stress, "limitations": limitations}
     # Compara as duas definições de peso no mesmo recorte de fundos com
@@ -264,11 +290,23 @@ def run(cache, output, settings, figures=True, quarantine=None):
     summary["comparacao_modelos"]["pesos"] = dict(zip(
         ("pearson_positivo", "mesmo_segmento", "mesma_faixa"), graph.COMPOUND_WEIGHTS))
     summary["comparacao_modelos"]["limites_faixas_brl"] = graph.PROPERTY_BANDS_BRL
+    segments = profile.segment.fillna("").to_dict()
+    dashboard_path = dashboard.write_dashboard(output, {
+        "settings": {"tau": settings.tau, "resolution": settings.resolution,
+                     "seed": settings.seed, "min_overlap": settings.min_overlap},
+        "relations": {
+            "direct": dashboard.relation_payload(g, members, mod, segments),
+            "inverse": dashboard.relation_payload(inverse_g, inverse_members, inverse_mod, segments),
+        },
+    })
+    summary["dashboard"] = str(dashboard_path)
     _write_json(output / "run.json", summary)
     if figures:
         plots.heatmap(corr, output, "matriz_correlacao", "Correlação de Pearson dos retornos diários", corr=True)
         plots.heatmap(cross, output, "segmentos_comunidades", "Número de fundos por segmento e comunidade")
         plots.network(g, members, output, "rede_louvain", f"Rede de similaridade (ρ ≥ {settings.tau:g})", settings.seed)
+        plots.network(inverse_g, inverse_members, output, "rede_louvain_inversa",
+                      f"Rede de relações inversas (ρ ≤ {-settings.tau:g})", settings.seed)
         plots.network(forest, members, output, "estrutura_kruskal", "Estrutura mínima de Kruskal", settings.seed)
         plots.experiments(output, sensitivity, daily, effects if effects is not None else pd.DataFrame(), graph.centralities(g), temporal)
     return summary

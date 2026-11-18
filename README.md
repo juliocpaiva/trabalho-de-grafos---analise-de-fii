@@ -15,9 +15,11 @@ Abra o terminal do VS Code em `D:\fii` e rode:
 
 `coletar.py` baixa preços ajustados via yfinance e informes da CVM. `main.py` usa os dados salvos em `data/coleta_api` ou o cache de referência em `data/cache` se a coleta ainda não foi feita. Com um cache disponível, você pode abrir o terminal e executar só `main.py`, inclusive offline.
 
-Para comparar o peso de Pearson com o peso sugerido na consultoria e rodar os estudos de carteiras, sensibilidade e choques, execute `.\.venv\Scripts\python.exe main.py --experimentos`. Os resultados completos vão para `outputs/experimentos`. Em `comparacao_modelos/`, veja `comparacao.csv` para o resumo, `pares.csv` para as parcelas de cada peso e `caso_entre_segmentos.csv` para o exemplo ao longo de duas janelas.
+Para comparar o peso de Pearson com o peso sugerido na consultoria e rodar os estudos de carteiras, sensibilidade e choques, execute `.\.venv\Scripts\python.exe main.py --experimentos`. O painel `outputs/experimentos/dashboard.html` também é aberto automaticamente; os resultados completos ficam nesse diretório. Em `comparacao_modelos/`, veja `comparacao.csv` para o resumo, `pares.csv` para as parcelas de cada peso e `caso_entre_segmentos.csv` para o exemplo ao longo de duas janelas.
 
 A análise calcula retornos e correlações, agrupa os FIIs por Louvain e usa Kruskal para ligar os fundos com a menor soma de distâncias. As saídas em `outputs/simples` incluem a lista das arestas selecionadas, a matriz de correlações, o perfil dos fundos e dois gráficos. Edite `config/amostra.csv` para mudar os FIIs ou rode `main.py --limiar 0.45` para mudar o corte de correlação.
+
+Louvain é executado em duas redes separadas: relações diretas (`Pearson ≥ limiar`) e inversas (`Pearson ≤ −limiar`). O perfil dos fundos e as tabelas de arestas preservam essa distinção. Cada execução também gera `dashboard.html`, um painel interativo offline com alternância entre redes, busca por ticker, comunidades e pares mais fortes. Ao terminar, `main.py` abre o painel no navegador padrão; se a abertura automática não estiver disponível, abra `outputs/simples/dashboard.html` manualmente. Não é necessário servidor nem conexão com a internet.
 
 ## Experimentos adicionais
 
@@ -47,7 +49,9 @@ O término da coleta é exclusivo. Nas duas execuções de referência, `--quara
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
 | `data/cache/`                                                                                  | Preços, volumes, eventos, informes e manifesto de coleta com SHA-256.                           |
 | `outputs/principal/run.json`                                                                   | Configuração, versões, cobertura, métricas e limitações.                                   |
+| `outputs/principal/dashboard.html`                                                             | Painel interativo local para explorar relações diretas e inversas.                         |
 | `outputs/principal/{quality,fund_profiles,pairs,price_quarantine}.csv`                         | Elegibilidade, fundamentos e consulta de pares.                                                  |
+| `outputs/principal/{direct_edges,inverse_edges,direct_communities,inverse_communities}.csv`     | Arestas e grupos separados pelo sinal da correlação.                                      |
 | `outputs/principal/{correlations,overlap,segment_communities,community_pair_correlations}.csv` | Pearson com sinal, datas em comum, composição e correlações entre comunidades.               |
 | `outputs/principal/{similarity,kruskal}.graphml`                                               | Grafos com atributos, importáveis em ferramentas como Gephi.                                    |
 | `outputs/principal/{portfolio_metrics,portfolios,portfolio_returns}.csv`                       | Métricas, composição e retornos das carteiras.                                                |
@@ -69,6 +73,7 @@ Os arquivos Python ficam lado a lado na raiz, como no trabalho de referência.
 | `comparacao_modelos.py` | Compara os dois grafos, as comunidades e as árvores na mesma amostra. |
 | `experimentos.py` e `carteiras_choques.py` | Executam os estudos adicionais. |
 | `visualizacao.py` | Gera os gráficos. |
+| `dashboard.py` | Gera o painel HTML interativo autocontido. |
 | `fii_network.py` | Mantém os comandos opcionais da versão anterior. |
 
 Fontes de preços e eventos: [Yahoo Finance por yfinance](https://ranaroussi.github.io/yfinance/reference/yfinance.price_history.html). Fonte de classificação e fundamentos: [Informes Mensais Estruturados da CVM](https://dados.cvm.gov.br/dataset/fii-doc-inf_mensal). `config/amostra.csv` documenta o universo de conveniência e o vínculo ticker–CNPJ. A coleta tenta primeiro yfinance e, se necessário, consulta o endpoint de séries do mesmo provedor. O manifesto guarda falhas e origem por ticker. Há suporte a `--fundamentals arquivo.csv`; use `ticker,reference,published,source` e, quando disponíveis, `cnpj,segment,name,net_assets,book_per_share,monthly_yield`. Cada linha é um registro completo desse fundo na data indicada; campos ausentes permanecem vazios. `monthly_yield` está em fração. Um CSV de calendário com coluna `date` pode ser informado com `--calendar`.
