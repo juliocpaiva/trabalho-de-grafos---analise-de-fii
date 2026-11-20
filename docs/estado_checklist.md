@@ -1,5 +1,7 @@
 # Checklist do grupo: o que existe e o que falta
 
+> **Atualização de 20/11/2026:** este documento descreve a versão 1. Spearman, pesos do grafo completo, Louvain na árvore, protocolo E1–E4 e indicadores por FII foram implementados depois; o estado atual está na seção Pendências do [README](../README.md).
+
 Revisão do código e das saídas locais em **18/11/2026**, usando os dez itens de `Checklist trabalho grafos.pdf`, enviado pelo grupo. Este documento organiza a versão 1; não implementa os experimentos novos do checklist.
 
 **Desenvolvido** = há implementação para o subitem descrito. **Parcial** = há parte ou uma variante, com a diferença indicada. **Pendente** = não foi encontrada implementação. A existência de uma função não garante dados disponíveis para todos os fundos. Os resultados numéricos históricos estão em [resultados de referência](resultados_referencia.md).

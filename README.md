@@ -1,112 +1,217 @@
-# Rede de FIIs — comece aqui
+# Rede de FIIs · Análise de Fundos Imobiliários com Grafos
 
-Protótipo SMAC03, Cenário 1 de Grafos, UNIFEI 2026.2. Investiga se correlações entre retornos de FIIs revelam concentrações que a classificação por segmento não mostra.
+Trabalho de Grafos (SMAC03 · UNIFEI 2026.2 · Cenário 1). O projeto lê preços e informes públicos de FIIs, monta uma rede de similaridade entre os fundos e responde:
 
-**Versão 1: implementação parcial em relação ao checklist do grupo.** Navegação revisada em 18/11/2026. Já existem coleta, Pearson, comunidades na rede limiarizada e árvore de Kruskal. Spearman, peso inverso da distância e o protocolo completo E1–E4 ainda estão pendentes.
+- quais FIIs **se comportam de forma parecida**, inclusive de segmentos diferentes;
+- se uma carteira **diversificada por segmento** está diversificada de fato;
+- quais fundos ocupam **posições centrais** e o que acontece quando um segmento cai;
+- qual combinação de **peso e algoritmo** (E1–E4) encontra os melhores grupos.
 
-## O que você procura?
+> Correlação mostra o que andou junto no passado, não causa nem garante o futuro. Os números saem do código; a leitura dos resultados e as conclusões são do grupo.
 
-| Quero… | Abra |
-|---|---|
-| Saber o que está desenvolvido, parcial ou pendente no PDF | [Checklist comentado, etapas 1–10](docs/estado_checklist.md) |
-| Entender o que cada arquivo recebe, faz e retorna | [Mapa dos arquivos e das saídas](docs/mapa_arquivos.md) |
-| Ver resultados completos nesta máquina | [outputs/experimentos/](outputs/experimentos/) e seu [run.json](outputs/experimentos/run.json) |
-| Entender fórmulas, fontes e decisões | [Metodologia](docs/metodologia.md) |
-| Ler a interpretação dos resultados da versão 1 | [Resultados de referência](docs/resultados_referencia.md) |
-| Conferir as diretrizes registradas no projeto | [Matriz original de requisitos](docs/matriz_requisitos.md) |
-| Apresentar ou dividir tarefas | [Roteiro](docs/roteiro_demonstracao.md) · [Responsabilidades](docs/responsabilidades.md) |
+## Escopo
 
-## Onde está cada etapa do checklist?
+Organizado pelas fases da metodologia CRISP-NET e pelas etapas 1–10 do checklist do grupo.
 
-| Etapa | Arquivos principais | Estado |
+| Fase | O que entrega | Status |
 |---|---|---|
-| [1. Seleção dos FIIs](docs/estado_checklist.md#etapa-1) | `config/amostra.csv`, `fonte_yfinance.py` | Parcial: falta procedência oficial da lista e validação cadastral integral |
-| [2. Coleta histórica](docs/estado_checklist.md#etapa-2) | `coletar.py`, `fonte_yfinance.py` | Desenvolvido; depende da disponibilidade das fontes |
-| [3. Indicadores](docs/estado_checklist.md#etapa-3) | `fonte_yfinance.py`, `carteiras_choques.py` | Parcial: faltam retorno médio e drawdown por FII, beta IFIX e giro médio |
-| [4. Correlações](docs/estado_checklist.md#etapa-4) | `grafo_base.py` | Parcial: Pearson pronto; Spearman pendente |
-| [5. Grafos e pesos](docs/estado_checklist.md#etapa-5) | `grafo_base.py`, `algo_mst.py` | Parcial: faltam os dois grafos completos do checklist |
-| [6. Louvain direto](docs/estado_checklist.md#etapa-6) | `algo_louvain.py` | Parcial: usa rede limiarizada; faltam protocolo completo, tempo e memória |
-| [7. Kruskal + Louvain](docs/estado_checklist.md#etapa-7) | `algo_mst.py` | Parcial: Kruskal pronto; Louvain na árvore pendente |
-| [8. Comparação E1–E4](docs/estado_checklist.md#etapa-8) | `comparacao_modelos.py`, `experimentos.py` | Parcial: comparação atual é Pearson/composto; E1–E4 não concluídos |
-| [9. Visualizações](docs/estado_checklist.md#etapa-9) | `visualizacao.py` | Parcial: figuras de Pearson, rede e árvore disponíveis |
-| [10. Análise acadêmica](docs/estado_checklist.md#etapa-10) | `docs/` | Parcial: notas e metodologia prontas; relatório e conclusões finais pendentes |
+| **1 · Seleção dos FIIs** | 42 tickers com CNPJ em `config/amostra.csv`, filtros de histórico (90 retornos), cobertura e negociação (80%) | ✅ Concluída (falta documentar a procedência da lista) |
+| **2 · Coleta** | Preços ajustados, volume e dividendos (yfinance) e informes mensais da CVM; quarentena de 11 preços conferidos na B3 | ✅ Concluída |
+| **3 · Indicadores** | Retorno médio, volatilidade, drawdown, volume financeiro médio, beta, DY, P/VP e segmento por FII | ✅ Implementada (beta usa proxy até subir `config/ifix.csv`) |
+| **4 · Correlações** | Pearson e Spearman, comparação par a par, heatmaps | ✅ Implementada |
+| **5 · Grafos e pesos** | Rede com limiar, redes direta/inversa por sinal, grafo completo com peso proporcional e com distância inversa | ✅ Implementada |
+| **6–7 · Comunidades** | Louvain direto e Kruskal → Louvain na árvore | ✅ Implementada |
+| **8 · Experimentos E1–E4** | Modularidade, Silhouette, coesão, estabilidade, tempo e memória, com vencedores | ✅ Implementada · ⏳ rodar com os dados reais |
+| **9 · Visualização** | Figuras PNG e painel interativo `dashboard.html` com a seção E1–E4 | ✅ Concluída |
+| **10 · Relatório e apresentação** | Relatório (até 9 páginas), slides (~15 min), papéis do grupo | ⏳ A fazer |
 
-Cada etapa tem subitens, evidências e limites no checklist comentado. O peso composto da consultoria **não é o modelo inverso da distância** solicitado no PDF. As cores da árvore usam as comunidades da rede; não demonstram Louvain executado na árvore.
+## Como funciona
 
-## Rodar pelo VS Code
+```mermaid
+flowchart LR
+    A[amostra.csv] --> C[Coleta: Yahoo + CVM] --> K[(data/cache)]
+    K --> P[Preparação e quarentena] --> R[Retornos diários]
+    R --> I[Indicadores por FII]
+    R --> CP[Pearson] & CS[Spearman]
+    CP & CS --> G1[Rede com limiar + Louvain]
+    CP & CS --> G2[Grafo completo: proporcional e distância inversa]
+    G2 --> E12[E1/E2: Louvain direto]
+    G2 --> KR[Kruskal] --> E34[E3/E4: Louvain na árvore]
+    E12 & E34 --> M[Métricas e vencedores]
+    G1 --> CA[Carteiras A × B e choques]
+    M & G1 & CA & I --> D[dashboard.html + CSV + PNG]
+```
 
-Abra a pasta `D:\fii`. Em **Terminal → Executar Tarefa…**, escolha:
-
-| Tarefa | Resultado |
+| Etapa | O que faz |
 |---|---|
-| `FIIs: 1 - Análise rápida (offline)` | 5 CSVs e 2 gráficos em `outputs/simples/` |
-| `FIIs: 2 - Análise completa da versão 1 (offline)` | Tabelas, grafos, figuras, carteiras e comparação Pearson/composto em `outputs/experimentos/` |
-| `FIIs: 3 - Consultar um FII nos resultados completos` | Pede ticker e lê perfil/pares em `outputs/experimentos/`; execute a tarefa 2 antes se necessário |
-| `FIIs: 4 - Verificar testes` | Suíte existente com dados sintéticos |
-| `FIIs: 5 - Coletar dados (requer internet)` | Baixa dados para `data/coleta_api/`; dispensável para analisar cache existente |
+| **Coleta** | `coletar.py` baixa preços ajustados, fechamento, volume e proventos de cada ticker e os informes mensais da CVM (segmento, patrimônio, VP por cota, DY). Grava tudo em CSV com hash SHA-256. |
+| **Preparação** | Alinha as datas, descarta preço inválido ou dia sem negócio, aplica a quarentena da B3 e calcula o retorno simples. Não preenche lacunas. |
+| **Correlações** | Pearson (relação linear) e Spearman (relação por postos, menos sensível a dias extremos). Cada par exige 75 pregões em comum. |
+| **Rede com limiar** | Liga dois FIIs quando ρ ≥ 0,35 (rede direta) ou ρ ≤ −0,35 (rede inversa). Serve para centralidade, carteiras e choques. |
+| **Grafo completo** | Liga todos os pares com ρ estimável, sem descartar os fracos, com um dos dois pesos do protocolo. |
+| **Kruskal** | Árvore geradora mínima sobre a distância d: guarda as N − 1 ligações mais fortes sem formar ciclos. |
+| **Louvain** | Agrupa os FIIs maximizando a modularidade (semente fixa, resolução 1). |
+| **Carteiras e choques** | A diversifica por segmento, B por comunidade. Forma até 14/11/2025 e avalia depois. Mede o comportamento nos piores dias de Shoppings. |
 
-O menu **Executar e Depurar (F5)** oferece as duas análises. Os atalhos usam a `.venv` e a raiz do projeto. As tarefas offline usam explicitamente `data/cache/`, o snapshot local de referência. Caso não exista, rode a coleta e use `data/coleta_api/` no comando ou ajuste o atalho.
+## Experimentos E1–E4
 
-### Pelo terminal
+O professor pediu para não ficar com um método só: definir uma base de comparação, testar variações e mostrar com métricas qual é melhor. O protocolo cruza dois pesos com dois caminhos de detecção e roda tudo com Pearson (base) e Spearman (variação), num total de 8 execuções.
 
-Na raiz do projeto, com o ambiente instalado:
+| Exp. | Peso da aresta | Detecção |
+|---|---|---|
+| **E1** | Proporcional | Louvain no grafo completo |
+| **E2** | Distância inversa | Louvain no grafo completo |
+| **E3** | Proporcional | Kruskal → Louvain na árvore |
+| **E4** | Distância inversa | Kruskal → Louvain na árvore |
 
-```powershell
-# Visão rápida usando o snapshot local
-.\.venv\Scripts\python.exe main.py --cache data/cache
+**Fórmulas.** Distância d = √(2·(1 − ρ)), que vai de 0 (ρ = 1) a 2 (ρ = −1). Peso proporcional = (1 + ρ)/2, entre 0 e 1. Peso por distância inversa = 1/(d + ε), com ε = 0,05 para evitar divisão por zero.
 
-# Todos os resultados implementados na versão 1
-.\.venv\Scripts\python.exe main.py --experimentos --cache data/cache
+**Regras de modelagem.**
+- Correlações negativas entram com peso pequeno, não são descartadas; Louvain não aceita pesos negativos.
+- As duas árvores têm as mesmas arestas, porque os dois pesos crescem com ρ. Muda só o peso que o Louvain recebe.
+- Toda partição é medida no **grafo completo** do próprio modelo. Assim E1 e E3 (e E2 e E4) são comparados na mesma régua.
 
-# Consultar os resultados completos sem recalcular
-.\.venv\Scripts\python.exe -m fii_network inspect VISC11 --top 5 --output outputs/experimentos
+| Métrica | Pergunta que responde | Melhor |
+|---|---|---|
+| Modularidade no grafo completo | Os grupos têm mais ligação interna do que o esperado ao acaso? | Maior |
+| Silhouette (distância d) | Cada FII está mais perto do seu grupo do que do grupo vizinho? | Maior (−1 a 1) |
+| ρ médio interno × entre grupos | Os grupos são coesos e separados? | Maior separação |
+| Estabilidade entre sementes (ARI) | O Louvain acha os mesmos grupos ao mudar a semente? | Perto de 1 |
+| Estabilidade temporal (ARI) | Os grupos da formação se repetem na avaliação? | Perto de 1 |
+| ARI × segmento | Os grupos repetem a classificação da CVM? | Só para leitura; um valor baixo é o achado do trabalho |
+| Tempo (média ± desvio, 30 repetições) e pico de memória | Quanto custa? | Menor |
+| Preservação pela árvore (ARI E1×E3, E2×E4) | A árvore mantém as comunidades do grafo completo? | Perto de 1 |
+
+**Vencedores.** A nota de qualidade é a média normalizada de modularidade, Silhouette e estabilidade. A nota de custo é a média de tempo e memória. O equilíbrio vale 70% qualidade e 30% custo, porque com 40 FIIs todos os métodos rodam em milissegundos.
+
+**Como ler.** Em grafo completo e denso, a modularidade fica baixa (perto de 0,02) mesmo com grupos bons; compare os experimentos entre si, não com o 0,3 dos livros. Na árvore, o Louvain tende a quebrar em mais grupos; a modularidade da própria árvore (`modularidade_estrutura`) é alta e **não** deve ser usada para comparar.
+
+## Saídas
+
+Tudo vai para `outputs/experimentos/` (análise completa) ou `outputs/simples/` (análise rápida).
+
+| Arquivo | O que mostra |
+|---|---|
+| **dashboard.html** | Painel offline: redes direta e inversa, busca por ticker, comunidades, pares e tabela E1–E4. Abre sozinho ao terminar. |
+| **protocolo_e1_e4/e1_e4.csv** | As 8 execuções com todas as métricas, notas e vencedores |
+| **protocolo_e1_e4/particoes_pearson.png** | E1–E4 lado a lado sobre a mesma árvore; cor = comunidade, formato = segmento |
+| **protocolo_e1_e4/protocolo_metricas.png** | Modularidade, Silhouette, estabilidade e tempo por experimento |
+| **indicadores_fundos.csv** | Tabela consolidada da etapa 3, um FII por linha |
+| **pearson_vs_spearman.csv / .png** | Diferença entre as duas correlações por par, maiores divergências primeiro |
+| **matriz_correlacao.png / matriz_spearman.png** | Mapas de calor |
+| **fund_profiles.csv, pairs.csv** | Perfil, comunidade e centralidade de cada FII; todos os pares com atributos |
+| **portfolio_metrics.csv, carteiras.png** | Carteira A (segmento) × B (comunidade) fora da amostra |
+| **shock_exposures.csv, choques.png** | Comportamento nos piores dias do segmento escolhido |
+| **comparacao_modelos/** | Pearson × peso composto (60% ρ, 20% segmento, 20% faixa de patrimônio) |
+| **run.json** | Parâmetros, versões, cobertura, vencedores E1–E4 e limitações |
+
+## Estrutura
+
+```
+config/            amostra de FIIs, auditoria B3, quarentena e (opcional) ifix.csv
+data/cache/        snapshot dos dados coletados, para rodar offline
+docs/              metodologia, resultados de referência e roteiro da apresentação
+tests/             24 testes com dados sintéticos
+coletar.py         baixa os dados
+main.py            roda a análise (rápida ou completa)
+fii_network.py     CLI com mais opções (collect, analyze, inspect)
+fonte_yfinance.py  coleta, cache, preparação e qualidade
+grafo_base.py      correlações, distâncias, pesos, redes e centralidades
+algo_louvain.py    Louvain
+algo_mst.py        Kruskal com union-find
+protocolo.py       experimentos E1–E4 e métricas
+indicadores.py     indicadores por FII
+experimentos.py    orquestra a análise completa
+carteiras_choques.py, comparacao_modelos.py, visualizacao.py, dashboard.py
 ```
 
-Sem `--cache`, `main.py` prefere `data/coleta_api/` quando há manifesto; caso contrário usa `data/cache/`. O simples gera `correlacoes.csv`; o completo gera `correlations.csv`. O [catálogo de saídas](docs/mapa_arquivos.md) explica cada arquivo.
+## Como rodar
 
-Para uma instalação nova, use Python 3.11 ou superior:
+Python 3.11 ou superior.
 
-```powershell
+**Instalação (uma vez)**
+
+```bash
+git clone https://github.com/juliocpaiva/trabalho-de-grafos---analise-de-fii.git
+cd trabalho-de-grafos---analise-de-fii
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e '.[test]'
-.\.venv\Scripts\python.exe coletar.py
-.\.venv\Scripts\python.exe main.py --experimentos
+source .venv/bin/activate          # Windows: .\.venv\Scripts\activate
+pip install -e ".[test]"
 ```
 
-Caches e resultados estão no `.gitignore` e não acompanham um clone. Os links para saídas só funcionam após geração local. Rodar no mesmo destino pode substituir arquivos; preserve outras configurações em pastas diferentes.
+**Dados.** Se `data/cache/` já estiver no repositório, pule para a análise. Se não, colete (precisa de internet, leva alguns minutos):
 
-### Ajustar parâmetros ou preservar outra execução
-
-```powershell
-.\.venv\Scripts\python.exe main.py --cache data/cache --limiar 0.45 --saida outputs/limiar_045
-.\.venv\Scripts\python.exe -m fii_network analyze --cache data/cache --output outputs/liquidez_revisao --min-turnover-brl 500000 --shock-segment Shoppings --quarantine config/quarentena_precos.csv
-.\.venv\Scripts\python.exe -m fii_network analyze --help
+```bash
+python coletar.py
 ```
 
-`main.py` aplica a quarentena configurada no projeto; na CLI completa, informe `--quarantine` explicitamente. `--experimentos` significa a análise completa **da versão 1**, não a conclusão de E1–E4.
+**Análise**
 
-## Organização das pastas
-
-```text
-fii/
-  README.md             ← entrada para o grupo
-  docs/                 ← checklist, mapa dos arquivos, metodologia e resultados
-  config/               ← amostra e auditoria/quarentena de preços
-  data/                 ← dados coletados e snapshot local, ignorados pelo Git
-  outputs/              ← resultados gerados, ignorados pelo Git
-    simples/            ← revisão rápida
-    experimentos/       ← revisão completa recomendada
-    principal/          ← execução anterior da CLI
-    liquidez/           ← referência com filtro financeiro
-  tests/                ← testes existentes
-  .vscode/              ← tarefas e configurações de execução
-  *.py                  ← entradas e módulos, detalhados no mapa dos arquivos
+```bash
+python main.py --experimentos                 # completa: E1–E4, carteiras, choques e painel
+python main.py                                # rápida: rede, Kruskal e painel
+python main.py --experimentos --repeticoes 5  # versão rápida do protocolo, para testar
+python -m fii_network inspect HGLG11 --output outputs/experimentos   # consulta um FII
+python -m pytest -q                           # testes
 ```
 
-Os nomes dos módulos foram preservados. Consulte o [mapa dos arquivos](docs/mapa_arquivos.md) para distinguir programas de entrada e módulos auxiliares.
+Opções úteis: `--limiar 0.45` muda o corte da rede, `--saida outputs/teste` grava em outra pasta, `--sem-navegador` não abre o painel. No VS Code, as mesmas tarefas estão em **Terminal → Executar Tarefa**.
 
-## Fontes e documentação técnica
+**Beta contra o IFIX.** O Yahoo não fornece o IFIX. Baixe a série no site da B3 (Índices → IFIX → Estatísticas históricas) e salve como `config/ifix.csv` com as colunas `date,close`. Sem esse arquivo, o beta usa a média igual da amostra e a tabela avisa isso na coluna `beta_referencia`.
 
-Preços e eventos: Yahoo Finance via yfinance. Segmentos e fundamentos: informes mensais da CVM. Evidências de preços contestados: `config/auditoria_b3.csv`; intervalos aplicados: `config/quarentena_precos.csv`.
+## Como colaborar
 
-O [guia técnico anterior](docs/guia_tecnico_v1.md) preserva os detalhes da primeira versão, incluindo formatos de dados complementares. Para o estado atual em relação ao pedido do grupo, use o [checklist comentado](docs/estado_checklist.md).
+**Antes de mexer:** `git pull` na sua branch e rode `python -m pytest -q`.
+
+**Depois de mexer:**
+
+```bash
+git checkout -b sua-branch          # nunca direto na main
+python -m pytest -q                 # tem que passar tudo
+git add arquivos_alterados
+git commit -m "O que mudou"
+git push -u origin sua-branch       # e abra um Pull Request para a main
+```
+
+- Um assunto por branch: `feat/...` para código novo, `docs/...` para texto. Antes de abrir o PR, faça `git merge origin/main` para não divergir como aconteceu com `Testes-Rodrigo`.
+- Toda função nova ganha um teste em `tests/` com dados sintéticos em que a resposta é conhecida.
+- Para comparar execuções, grave em pastas diferentes (`--saida`) e confira o `run.json` de cada uma.
+- **Suba** `data/cache/` (o snapshot de referência) e `config/`. **Não suba** `outputs/`, `.venv/` nem `data/coleta_api/`.
+
+## Limitações
+
+- Correlação histórica: mostra associação, não causa, e muda com o período (a estabilidade temporal medida foi baixa).
+- Amostra intencional de 42 FIIs, não todo o mercado; pode haver viés de sobrevivência.
+- Segmento é o declarado à CVM, inclusive categorias amplas como "Multicategoria".
+- Carteiras com pesos iguais, sem custos nem impostos; a escolha do universo foi retrospectiva.
+- Yahoo Finance tem falhas pontuais; os preços contestados ficam em quarentena com evidência da B3.
+
+## Pendências
+
+- [x] Coleta, preparação e quarentena dos preços.
+- [x] Pearson, rede com limiar, Louvain, Kruskal, centralidades, carteiras e choques.
+- [x] Redes direta e inversa e painel interativo.
+- [x] Spearman e comparação com Pearson.
+- [x] Pesos proporcional e distância inversa no grafo completo.
+- [x] Louvain na árvore de Kruskal e protocolo E1–E4 com métricas.
+- [x] Indicadores por FII (retorno, drawdown, volume médio, beta).
+- [ ] Subir `data/cache/` para o Git, para qualquer um rodar offline.
+- [ ] Baixar o IFIX da B3 para `config/ifix.csv`.
+- [ ] Rodar `python main.py --experimentos` com os dados reais e registrar os vencedores em `docs/resultados_referencia.md`.
+- [ ] Documentar a procedência da lista de 42 FIIs.
+- [ ] Relatório no template oficial (até 9 páginas, introdução de 1 página).
+- [ ] Slides de ~15 min e roteiro da demonstração.
+- [ ] Preencher a tabela de equipe abaixo e `docs/responsabilidades.md`.
+
+## Equipe
+
+| Nome | Papel |
+|---|---|
+| Júlio | Desenvolvimento: base da análise, coleta, Kruskal e Louvain |
+| Rodrigo Braz | Desenvolvimento: redes por sinal e painel interativo |
+| A preencher | Orador |
+| A preencher | Modelagem |
+| A preencher | Modelagem |
+
+---
+SMAC03 · UNIFEI · 2026
