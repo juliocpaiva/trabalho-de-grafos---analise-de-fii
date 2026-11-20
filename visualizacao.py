@@ -212,3 +212,91 @@ def experiments(root, sensitivity, portfolio, shocks, central, temporal):
             }).plot.bar(ax=ax, rot=0)
             ax.set(xlabel="Carteira", ylabel="Retorno diário médio (%)", title="Associação histórica em dias de choque")
             save(fig, root, "choques")
+
+
+_SEGMENT_MARKERS = "osD^vP*Xph<>"
+
+
+def protocol_partitions(tree, partitions, segments, root, seed, name="protocolo_particoes"):
+    """Quatro painéis (E1–E4) com a mesma posição dos FIIs: só as cores mudam.
+
+    A posição vem da árvore de Kruskal. Cor = comunidade do experimento;
+    formato do marcador = segmento da CVM. Assim dá para ver a olho se as
+    comunidades seguem ou atravessam os segmentos.
+    """
+    pos = nx.kamada_kawai_layout(tree, weight=None) if tree.number_of_edges() else nx.circular_layout(tree)
+    seg = segments.reindex(list(tree)).fillna("Sem classificação")
+    shapes = {s: _SEGMENT_MARKERS[i % len(_SEGMENT_MARKERS)] for i, s in enumerate(sorted(seg.unique()))}
+    fig, axes = plt.subplots(2, 2, figsize=(14, 11.5))
+    cmap = plt.get_cmap("tab20")
+    for ax, column in zip(axes.flat, ["E1", "E2", "E3", "E4"]):
+        members = partitions[column]
+        nx.draw_networkx_edges(tree, pos, ax=ax, alpha=.35, edge_color="#5a6b78", width=.8)
+        for segment, marker in shapes.items():
+            nodes = [t for t in tree if seg[t] == segment]
+            nx.draw_networkx_nodes(tree, pos, nodelist=nodes, node_shape=marker, ax=ax, node_size=170,
+                                   node_color=[cmap((int(members[t]) - 1) % 20) for t in nodes],
+                                   edgecolors="#26343d", linewidths=.5)
+        nx.draw_networkx_labels(tree, {t: (x, y + .045) for t, (x, y) in pos.items()},
+                                {t: t.removesuffix(".SA") for t in tree}, font_size=6, ax=ax)
+        ax.set_title(f"{column}: {members.nunique()} comunidades", fontsize=12, fontweight="bold")
+        ax.set_axis_off()
+    handles = [plt.Line2D([], [], marker=m, linestyle="", color="#55636e", label=s, markersize=8)
+               for s, m in shapes.items()]
+    fig.legend(handles=handles, loc="lower center", ncol=min(5, len(handles)), fontsize=9,
+               title="Formato = segmento (CVM)", frameon=False)
+    fig.suptitle("Comunidades em E1–E4 sobre a mesma árvore de Kruskal\n"
+                 "E1/E2 = Louvain no grafo completo · E3/E4 = Louvain na árvore · cor = comunidade",
+                 fontsize=14)
+    fig.subplots_adjust(bottom=.1, top=.9, hspace=.12, wspace=.05)
+    save(fig, root, name)
+
+
+def protocol_metrics(table, root, name="protocolo_metricas"):
+    """Barras lado a lado das métricas de qualidade e tempo médio com desvio."""
+    metrics = [("modularidade_grafo_completo", "Modularidade no grafo completo"),
+               ("silhouette", "Silhouette (distância d)"),
+               ("estabilidade_sementes", "Estabilidade entre sementes (ARI)"),
+               ("tempo_medio_ms", "Tempo médio (ms, ± desvio)")]
+    methods = list(dict.fromkeys(table.correlacao))
+    experiments = list(dict.fromkeys(table.experimento))
+    fig, axes = plt.subplots(1, 4, figsize=(17, 4.2))
+    width = .8 / max(1, len(methods))
+    colors = ("#176b79", "#c47a2c", "#604899")
+    x = np.arange(len(experiments))
+    for ax, (column, title) in zip(axes, metrics):
+        for i, method in enumerate(methods):
+            rows = table[table.correlacao.eq(method)].set_index("experimento").reindex(experiments)
+            values = pd_to_float(rows[column])
+            err = pd_to_float(rows["tempo_desvio_ms"]) if column == "tempo_medio_ms" else None
+            ax.bar(x + (i - (len(methods) - 1) / 2) * width, values, width, yerr=err,
+                   color=colors[i % len(colors)], label=method.capitalize(), capsize=3)
+        ax.set_xticks(x, experiments)
+        ax.set_title(title, fontsize=11)
+        ax.axhline(0, color="#333", linewidth=.6)
+        ax.grid(axis="y", alpha=.2)
+    axes[0].legend(fontsize=9)
+    fig.suptitle("Protocolo E1–E4: qualidade e custo", fontsize=14, fontweight="bold")
+    fig.tight_layout()
+    save(fig, root, name)
+
+
+def pearson_vs_spearman(table, root, name="pearson_vs_spearman"):
+    """Dispersão Pearson × Spearman por par; distância da diagonal = divergência."""
+    data = table.dropna(subset=["pearson", "spearman"])
+    fig, ax = plt.subplots(figsize=(6.2, 6))
+    ax.scatter(data.pearson, data.spearman, s=12, alpha=.55, color="#176b79")
+    low = float(min(data.pearson.min(), data.spearman.min(), 0)) if len(data) else -1
+    ax.plot([low, 1], [low, 1], color="#c34f68", linewidth=1, label="Pearson = Spearman")
+    for row in data.head(5).itertuples():
+        ax.annotate(f"{row.a.removesuffix('.SA')}–{row.b.removesuffix('.SA')}", (row.pearson, row.spearman),
+                    fontsize=7, xytext=(4, -8), textcoords="offset points")
+    ax.set(xlabel="Pearson", ylabel="Spearman", title="Pearson × Spearman por par de FIIs")
+    ax.legend(fontsize=8)
+    ax.grid(alpha=.2)
+    save(fig, root, name)
+
+
+def pd_to_float(series):
+    """Converte uma coluna com None para float (NaN), aceita pelo matplotlib."""
+    return np.array([np.nan if v is None else float(v) for v in series], dtype=float)

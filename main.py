@@ -22,6 +22,11 @@ from grafo_base import centralities, correlation, signed_pairs, signed_similarit
 from visualizacao import network
 
 
+RAIZ = Path(__file__).resolve().parent
+QUARENTENA = RAIZ / "config" / "quarentena_precos.csv"
+IFIX = RAIZ / "config" / "ifix.csv"
+
+
 def open_dashboard(path):
     """Abre o painel local no navegador padrão ou informa o caminho manual."""
     dashboard_path = Path(path).resolve()
@@ -36,7 +41,7 @@ def analisar(cache, saida, limiar):
     mercado, amostra, informes, calendario, _ = load_cache(cache)
     precos, fechamentos, volumes = price_panels(mercado, amostra.ticker.tolist(), calendario)
     # As datas auditadas na B3 ficam vazias, preservando a série bruta no cache.
-    quarentena = pd.read_csv("config/quarentena_precos.csv")
+    quarentena = pd.read_csv(QUARENTENA)
     quarentena = quarentena[quarentena.ticker.isin(precos.columns)]
     precos, fechamentos, volumes, auditoria = apply_quarantine(
         precos, fechamentos, volumes, quarentena
@@ -114,6 +119,9 @@ def main(argv=None):
     parser.add_argument("--saida", type=Path)
     parser.add_argument("--experimentos", action="store_true", help="Executa a análise completa, incluindo carteiras e choques.")
     parser.add_argument("--limiar", type=float, default=0.35)
+    parser.add_argument("--repeticoes", type=int, default=30,
+                        help="Repetições de cada experimento E1–E4 para medir tempo e estabilidade.")
+    parser.add_argument("--sem-navegador", action="store_true", help="Não abre o painel ao terminar.")
     args = parser.parse_args(argv)
 
     # Prefere a última coleta local. O cache de referência permite abrir o
@@ -127,9 +135,14 @@ def main(argv=None):
             saida = args.saida or Path("outputs/experimentos")
             # Até o corte inclusive são dados de formação. Os pregões
             # posteriores são reservados para avaliar as carteiras.
-            parametros = Settings(cutoff="2025-11-14", tau=args.limiar, shock_segment="Shoppings")
-            resumo = run(cache, saida, parametros, quarantine="config/quarentena_precos.csv")
-            open_dashboard(resumo["dashboard"])
+            parametros = Settings(cutoff="2025-11-14", tau=args.limiar, shock_segment="Shoppings",
+                                  protocol_repeats=args.repeticoes, ifix_path=str(IFIX))
+            resumo = run(cache, saida, parametros, quarantine=str(QUARENTENA))
+            if not args.sem_navegador:
+                open_dashboard(resumo["dashboard"])
+            vencedores = resumo["protocolo_e1_e4"]["vencedores"]
+            print(f"E1–E4: melhor qualidade {', '.join(vencedores['melhor_qualidade'])}; "
+                  f"melhor equilíbrio {', '.join(vencedores['melhor_equilibrio'])}.")
             print(f"Carteiras: {resumo['portfolios']}. Choque: {resumo['shock']['status']}.")
             comparacao = resumo["comparacao_modelos"]
             print(f"Comparação entre modelos: {comparacao['status']} ({comparacao['compared_funds']} FIIs).")
@@ -138,7 +151,8 @@ def main(argv=None):
         else:
             saida = args.saida or Path("outputs/simples")
             analisar(cache, saida, args.limiar)
-            open_dashboard(saida / "dashboard.html")
+            if not args.sem_navegador:
+                open_dashboard(saida / "dashboard.html")
     except FileNotFoundError as erro:
         parser.exit(1, f"Arquivo ausente: {erro.filename}. Execute coletar.py para baixar os dados.\n")
     except (OSError, ValueError, RuntimeError) as erro:

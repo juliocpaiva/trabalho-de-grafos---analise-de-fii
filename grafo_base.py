@@ -6,21 +6,92 @@ import networkx as nx
 import pandas as pd
 
 
-def correlation(returns, min_overlap):
-    """Retorna as matrizes de correlação de Pearson e de pregões em comum.
+def correlation(returns, min_overlap, method="pearson"):
+    """Retorna as matrizes de correlação e de pregões em comum.
 
+    method="pearson" mede associação linear; method="spearman" correlaciona
+    as posições (postos) dos retornos e é menos sensível a dias extremos.
     Cada par usa somente as datas em que os dois fundos têm retorno válido.
     Pares sem a amostra mínima ou sem variação mantêm a correlação ausente.
     """
     if min_overlap < 3:
         raise ValueError("A correlação exige ao menos três observações em comum.")
+    if method not in ("pearson", "spearman"):
+        raise ValueError("Método de correlação deve ser 'pearson' ou 'spearman'.")
     cols = sorted(returns.columns)
     values = returns[cols]
     # A máscara vale 1 onde há retorno. O produto de duas colunas soma
     # quantas vezes os dois fundos têm valor na mesma linha.
     mask = values.notna().astype("int64")
     overlap = mask.T @ mask
-    return values.corr(method="pearson", min_periods=min_overlap).clip(-1, 1), overlap
+    return values.corr(method=method, min_periods=min_overlap).clip(-1, 1), overlap
+
+
+def compare_correlations(pearson, spearman, overlap=None):
+    """Lista cada par com Pearson, Spearman e a diferença entre eles.
+
+    Uma diferença grande sugere que a relação linear é puxada por poucos
+    dias extremos ou que a relação é monotônica, mas não linear.
+    """
+    rows = []
+    for a, b in combinations(pearson.columns, 2):
+        p, s = pearson.at[a, b], spearman.at[a, b]
+        rows.append((a, b, p, s, s - p if pd.notna(p) and pd.notna(s) else float("nan"),
+                     int(overlap.at[a, b]) if overlap is not None else None))
+    table = pd.DataFrame(rows, columns=["a", "b", "pearson", "spearman", "diferenca", "pregoes_em_comum"])
+    table["diferenca_abs"] = table.diferenca.abs()
+    return table.sort_values("diferenca_abs", ascending=False, kind="stable").reset_index(drop=True)
+
+
+# Modelos de peso do protocolo E1–E4. Os dois partem da mesma distância
+# d = sqrt(2(1 − ρ)), que vale 0 para ρ = 1, √2 para ρ = 0 e 2 para ρ = −1.
+WEIGHT_MODELS = ("proporcional", "distancia_inversa")
+INVERSE_EPSILON = 0.05
+
+
+def distance_matrix(corr, missing=None):
+    """Converte correlações em distâncias de Mantegna, d = sqrt(2(1 − ρ)).
+
+    missing define a distância de pares sem correlação estimável. None
+    mantém o valor ausente; um número (por exemplo √2, de ρ = 0) preenche.
+    """
+    dist = (2 * (1 - corr.clip(-1, 1))).clip(lower=0) ** .5
+    for t in dist.columns:
+        dist.at[t, t] = 0.0
+    return dist if missing is None else dist.fillna(missing)
+
+
+def edge_weight(rho, model, epsilon=INVERSE_EPSILON):
+    """Peso de uma aresta no grafo completo, sempre positivo.
+
+    proporcional: w = (1 + ρ) / 2, cresce em linha reta com ρ e vai de 0 a 1;
+    correlações negativas viram pesos pequenos, sem descartar o par.
+    distancia_inversa: w = 1 / (d + ε), cresce muito para pares quase
+    idênticos; ε evita divisão por zero quando ρ = 1.
+    """
+    rho = max(-1.0, min(1.0, float(rho)))
+    if model == "proporcional":
+        return (1 + rho) / 2
+    if model == "distancia_inversa":
+        return 1 / ((2 * (1 - rho)) ** .5 + epsilon)
+    raise ValueError(f"Modelo de peso desconhecido: {model}. Use {', '.join(WEIGHT_MODELS)}.")
+
+
+def complete_graph(corr, model, epsilon=INVERSE_EPSILON):
+    """Grafo completo ponderado: uma aresta para cada par com ρ estimável.
+
+    Diferente da rede limiarizada, nenhum par é descartado por ser fraco.
+    Cada aresta guarda rho, distance e o weight do modelo escolhido.
+    """
+    g = nx.Graph(model=model, epsilon=epsilon)
+    g.add_nodes_from(sorted(corr.columns))
+    for a, b in combinations(g.nodes, 2):
+        rho = corr.at[a, b]
+        if pd.notna(rho):
+            rho = max(-1.0, min(1.0, float(rho)))
+            g.add_edge(a, b, rho=rho, distance=(2 * (1 - rho)) ** .5,
+                       weight=edge_weight(rho, model, epsilon))
+    return g
 
 
 def pairs(corr, overlap):

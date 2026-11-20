@@ -143,3 +143,22 @@ def test_cache_integrity_checks_inputs(cache):
         stream.write("\n")
     with pytest.raises(ValueError, match="market.csv"):
         data.load_cache(path)
+
+
+def test_offline_run_exports_spearman_indicators_and_protocol(cache):
+    path, dates = cache
+    root = path / "out_protocolo"
+    settings = Settings(cutoff=str(dates[24].date()), tau=.7, min_days=10, min_overlap=8,
+                        min_test_days=10, portfolio_size=2, min_events=1, protocol_repeats=2)
+    summary = run(path, root, settings, figures=True)
+    table = pd.read_csv(root / "protocolo_e1_e4" / "e1_e4.csv")
+    assert len(table) == 8 and set(table.correlacao) == {"pearson", "spearman"}
+    assert table.melhor_equilibrio.any()
+    assert summary["protocolo_e1_e4"]["status"] == "avaliado"
+    assert (root / "protocolo_e1_e4" / "protocolo_metricas.png").is_file()
+    assert (root / "protocolo_e1_e4" / "particoes_pearson.png").is_file()
+    assert (root / "matriz_spearman.png").is_file()
+    indicators = pd.read_csv(root / "indicadores_fundos.csv")
+    assert {"retorno_medio_diario", "drawdown_maximo", "beta", "volume_financeiro_medio_brl"}.issubset(indicators)
+    assert len(pd.read_csv(root / "pearson_vs_spearman.csv")) == 6
+    assert "Experimentos E1–E4" in (root / "dashboard.html").read_text(encoding="utf-8")

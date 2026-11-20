@@ -32,6 +32,7 @@ svg{width:100%;height:100%;display:block}.edge{stroke-linecap:round;transition:o
 .selection{border-radius:11px;background:#f3f7f8;padding:12px;margin-top:14px;color:#536c79;font-size:13px;min-height:44px}
 .table-panel{margin-top:18px}.tablewrap{overflow:auto;max-height:430px}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:#718692;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#f8fafb;position:sticky;top:0}
 th,td{padding:10px 12px;border-bottom:1px solid #edf1f3}td.num{text-align:right;font-variant-numeric:tabular-nums}.pill{font-size:11px;font-weight:750;padding:4px 8px;border-radius:99px}.pill.direct{background:#e2f5f0;color:#087766}.pill.inverse{background:#fff0f2;color:#b14259}
+.pill.best{background:#e8eefc;color:#2f4fa8}.protocol-panel{margin-top:18px}.protocol-panel td.num.best-cell{font-weight:800;color:#087766;background:#e2f5f0}
 .note{margin:18px 2px 4px;color:#718692;font-size:12px;line-height:1.6}.empty{padding:28px;color:#708692;text-align:center}.footer{padding:24px;text-align:center;color:#8a9ba4;font-size:11px}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.graphbox{height:470px}.cards{grid-template-columns:repeat(2,minmax(125px,1fr))}}
 @media(max-width:560px){.wrap{padding:14px}.top{padding:22px 16px}.top p{margin-left:0}.toolbar{align-items:stretch}.toggle{width:100%}.toggle button{flex:1}.search{margin:0;width:100%}.cards{gap:9px}.card{padding:13px}.value{font-size:22px}.panel{padding:14px}.graphbox{height:400px}}
@@ -76,6 +77,12 @@ th,td{padding:10px 12px;border-bottom:1px solid #edf1f3}td.num{text-align:right;
     <p class="sub">Ordenados pela intensidade absoluta da correlação. O sinal indica se os retornos tendem a variar juntos ou em sentidos opostos.</p>
     <div class="tablewrap"><table><thead><tr><th>FII A</th><th>FII B</th><th>Tipo</th><th class="num">Pearson</th><th class="num">Pregões comuns</th></tr></thead><tbody id="pairs"></tbody></table></div>
     <div id="no-pairs" class="empty" hidden>Nenhum par atingiu o limiar nesta rede.</div>
+  </section>
+  <section class="panel protocol-panel" id="protocol-panel" hidden>
+    <h2>Experimentos E1–E4</h2>
+    <p class="sub">Dois pesos (proporcional e distância inversa) × dois caminhos (Louvain no grafo completo ou na árvore de Kruskal), com Pearson e Spearman. Modularidade medida sempre no grafo completo do modelo; em verde, o melhor valor de cada coluna.</p>
+    <div id="protocol-winners" class="selection"></div>
+    <div class="tablewrap"><table><thead><tr><th>Exp.</th><th>Correlação</th><th>Peso</th><th>Detecção</th><th class="num">Comunidades</th><th class="num">Modularidade</th><th class="num">Silhouette</th><th class="num">Estabilidade</th><th class="num">ARI × segmento</th><th class="num">Tempo (ms)</th><th class="num">Memória (KB)</th></tr></thead><tbody id="protocol-rows"></tbody></table></div>
   </section>
   <p class="note">Pearson mede associação linear histórica, não causalidade nem garantia de comportamento futuro. Os dados e parâmetros desta página foram gerados localmente pelo projeto.</p>
 </main>
@@ -190,7 +197,8 @@ function renderPairs() {
   rows.forEach(e=>{
     const row=document.createElement("tr");
     row.append(el("td","",shortTicker(e.a)),el("td","",shortTicker(e.b)));
-    row.append(el("td",`pill ${mode==="direct"?"direct":"inverse"}`,mode==="direct"?"Direta":"Inversa"));
+    const kind=el("td"); kind.append(el("span",`pill ${mode==="direct"?"direct":"inverse"}`,mode==="direct"?"Direta":"Inversa"));
+    row.append(kind);
     const rho=el("td","num",fmt(e.rho,4)), overlap=el("td","num",Number(e.overlap).toLocaleString("pt-BR"));
     row.append(rho,overlap); body.append(row);
   });
@@ -230,7 +238,35 @@ document.getElementById("download").addEventListener("click",()=>{
   const url=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}));
   const link=document.createElement("a");link.href=url;link.download=`pares_${mode==="direct"?"diretos":"inversos"}.csv`;link.click();URL.revokeObjectURL(url);
 });
+function renderProtocol() {
+  const protocol=DATA.protocol;
+  if(!protocol||!protocol.rows||!protocol.rows.length) return;
+  document.getElementById("protocol-panel").hidden=false;
+  const cols=[["comunidades",0,null],["modularidade_grafo_completo",3,"max"],["silhouette",3,"max"],
+    ["estabilidade_sementes",3,"max"],["ari_vs_segmento",3,null],["tempo_medio_ms",2,"min"],["memoria_pico_kb",0,"min"]];
+  const best={};
+  cols.forEach(([key,,rule])=>{ if(!rule) return;
+    const values=protocol.rows.map(r=>r[key]).filter(v=>v!==null&&v!==undefined&&Number.isFinite(Number(v))).map(Number);
+    if(values.length) best[key]=rule==="max"?Math.max(...values):Math.min(...values); });
+  const body=document.getElementById("protocol-rows"); body.replaceChildren();
+  protocol.rows.forEach(r=>{
+    const row=document.createElement("tr");
+    row.append(el("td","",r.experimento),el("td","",r.correlacao),el("td","",r.peso==="proporcional"?"Proporcional":"Distância inversa"),el("td","",r.deteccao));
+    cols.forEach(([key,digits])=>{
+      const cell=el("td","num",fmt(r[key],digits));
+      if(best[key]!==undefined&&r[key]!==null&&Number(r[key])===best[key]) cell.classList.add("best-cell");
+      row.append(cell);
+    });
+    body.append(row);
+  });
+  const names=label=>protocol.rows.filter(r=>r[label]).map(r=>`${r.experimento} (${r.correlacao})`).join(", ")||"—";
+  const box=document.getElementById("protocol-winners");
+  box.replaceChildren(el("div","",`Melhor qualidade: ${names("melhor_qualidade")}`),
+    el("div","",`Menor custo: ${names("melhor_custo")}`),
+    el("div","",`Melhor equilíbrio (70% qualidade, 30% custo): ${names("melhor_equilibrio")}`));
+}
 render();
+renderProtocol();
 </script>
 </body>
 </html>
@@ -312,6 +348,28 @@ def relation_payload(graph, membership, modularity, segments=None):
         "nodes": funds,
         "edges": edges,
     }
+
+
+def protocol_payload(table, partitions=None):
+    """Resume a tabela E1–E4 para o painel, com valores ausentes como null."""
+    keep = ["experimento", "correlacao", "peso", "deteccao", "comunidades", "modularidade_grafo_completo",
+            "silhouette", "estabilidade_sementes", "ari_vs_segmento", "tempo_medio_ms", "memoria_pico_kb",
+            "melhor_qualidade", "melhor_custo", "melhor_equilibrio"]
+    rows = []
+    for record in table.reindex(columns=keep).to_dict("records"):
+        clean = {}
+        for key, value in record.items():
+            if hasattr(value, "item"):
+                value = value.item()
+            if isinstance(value, float) and value != value:
+                value = None
+            clean[key] = value
+        rows.append(clean)
+    payload = {"rows": rows}
+    if partitions is not None:
+        payload["partitions"] = {str(t): {str(k): int(v) for k, v in row.items()}
+                                 for t, row in partitions.iterrows()}
+    return payload
 
 
 def write_dashboard(output, payload):

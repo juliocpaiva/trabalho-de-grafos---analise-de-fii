@@ -20,6 +20,8 @@ import visualizacao as plots
 from algo_louvain import communities
 from algo_mst import kruskal
 from comparacao_modelos import compare_models
+from indicadores import fund_indicators
+from protocolo import ProtocolSettings, rank, run_protocol, tree_preservation
 
 
 @dataclass(frozen=True)
@@ -42,6 +44,8 @@ class Settings:
     shock_quantile: float = .05
     shock_threshold: float | None = None
     min_events: int = 5
+    protocol_repeats: int = 30
+    ifix_path: str | None = "config/ifix.csv"
 
     def validate(self):
         if self.min_days < 3 or self.min_overlap < 3 or self.min_test_days < 2 or self.portfolio_size < 2:
@@ -58,6 +62,8 @@ class Settings:
             raise ValueError("Quantil ou mínimo de choques inválido.")
         if self.shock_threshold is not None and not -1 < self.shock_threshold < 0:
             raise ValueError("Limiar de choque deve estar em (-1,0).")
+        if self.protocol_repeats < 2:
+            raise ValueError("O protocolo E1–E4 exige pelo menos duas repetições.")
 
 
 def _partition(returns, settings):
@@ -111,6 +117,39 @@ def _json_value(x):
 def _write_json(path, data_):
     path.write_text(json.dumps(_json_value(data_), indent=2, ensure_ascii=False, allow_nan=False),
                     encoding="utf-8")
+
+
+def _protocol_stage(returns, train, test, names, corr, spearman, profile, settings, output, figures):
+    """Roda E1–E4 com Pearson (base) e Spearman (variação) e grava as saídas."""
+    folder = Path(output) / "protocolo_e1_e4"
+    folder.mkdir(parents=True, exist_ok=True)
+    config = ProtocolSettings(resolution=settings.resolution, seed=settings.seed,
+                              repeats=settings.protocol_repeats)
+    tables, partitions, summary = [], {}, {}
+    for label, matrix, method in (("pearson", corr, "pearson"), ("spearman", spearman, "spearman")):
+        windows = None
+        if len(train) >= settings.min_overlap and len(test) >= settings.min_overlap:
+            windows = (graph.correlation(train[names], settings.min_overlap, method)[0],
+                       graph.correlation(test[names], settings.min_overlap, method)[0])
+        table, parts, structures = run_protocol(matrix, config, profile.segment, label, windows)
+        tables.append(table)
+        partitions[label] = parts
+        parts.to_csv(folder / f"particoes_{label}.csv")
+        summary[label] = {"preservacao_pela_arvore_ari": tree_preservation(parts)}
+        if figures:
+            plots.protocol_partitions(structures["E3"], parts, profile.segment, folder, settings.seed,
+                                      f"particoes_{label}")
+    result = pd.concat(tables, ignore_index=True)
+    # As notas comparam as oito execuções juntas (4 experimentos × 2 correlações).
+    result = rank(result.drop(columns=[c for c in result if c.startswith(("nota_", "melhor_"))]))
+    result.to_csv(folder / "e1_e4.csv", index=False)
+    best = {label: result.loc[result[label], ["experimento", "correlacao"]].astype(str).agg(" ".join, axis=1).tolist()
+            for label in ("melhor_qualidade", "melhor_custo", "melhor_equilibrio")}
+    summary.update({"status": "avaliado", "repeticoes": config.repeats, "epsilon": config.epsilon,
+                    "vencedores": best, "tabela": str(folder / "e1_e4.csv")})
+    if figures:
+        plots.protocol_metrics(result, folder)
+    return result, partitions, summary
 
 
 def run(cache, output, settings, figures=True, quarantine=None):
@@ -291,6 +330,23 @@ def run(cache, output, settings, figures=True, quarantine=None):
         ("pearson_positivo", "mesmo_segmento", "mesma_faixa"), graph.COMPOUND_WEIGHTS))
     summary["comparacao_modelos"]["limites_faixas_brl"] = graph.PROPERTY_BANDS_BRL
     segments = profile.segment.fillna("").to_dict()
+    # Etapas 3, 4 e 8 do checklist: indicadores por FII, Spearman e E1–E4.
+    spearman, _ = graph.correlation(returns[names], settings.min_overlap, method="spearman")
+    correlation_gap = graph.compare_correlations(corr, spearman, overlap)
+    indicators, benchmark = fund_indicators(returns[names], quote[names], volume[names], profile,
+                                            settings.ifix_path)
+    spearman.to_csv(output / "correlations_spearman.csv")
+    correlation_gap.to_csv(output / "pearson_vs_spearman.csv", index=False)
+    indicators.to_csv(output / "indicadores_fundos.csv")
+    protocol, protocol_parts, summary["protocolo_e1_e4"] = _protocol_stage(
+        returns, train, test, names, corr, spearman, profile, settings, output, figures)
+    valid_gap = correlation_gap.dropna(subset=["diferenca"])
+    summary["spearman"] = {
+        "pares": int(len(valid_gap)),
+        "diferenca_media_abs": float(valid_gap.diferenca_abs.mean()) if len(valid_gap) else None,
+        "correlacao_entre_matrizes": float(valid_gap.pearson.corr(valid_gap.spearman)) if len(valid_gap) >= 3 else None,
+    }
+    summary["indicadores"] = {"beta_referencia": benchmark, "fundos": int(len(indicators))}
     dashboard_path = dashboard.write_dashboard(output, {
         "settings": {"tau": settings.tau, "resolution": settings.resolution,
                      "seed": settings.seed, "min_overlap": settings.min_overlap},
@@ -298,10 +354,13 @@ def run(cache, output, settings, figures=True, quarantine=None):
             "direct": dashboard.relation_payload(g, members, mod, segments),
             "inverse": dashboard.relation_payload(inverse_g, inverse_members, inverse_mod, segments),
         },
+        "protocol": dashboard.protocol_payload(protocol, protocol_parts["pearson"]),
     })
     summary["dashboard"] = str(dashboard_path)
     _write_json(output / "run.json", summary)
     if figures:
+        plots.heatmap(spearman, output, "matriz_spearman", "Correlação de Spearman dos retornos diários", corr=True)
+        plots.pearson_vs_spearman(correlation_gap, output)
         plots.heatmap(corr, output, "matriz_correlacao", "Correlação de Pearson dos retornos diários", corr=True)
         plots.heatmap(cross, output, "segmentos_comunidades", "Número de fundos por segmento e comunidade")
         plots.network(g, members, output, "rede_louvain", f"Rede de similaridade (ρ ≥ {settings.tau:g})", settings.seed)
