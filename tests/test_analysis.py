@@ -152,7 +152,8 @@ def test_offline_run_exports_spearman_indicators_and_protocol(cache):
                         min_test_days=10, portfolio_size=2, min_events=1, protocol_repeats=2)
     summary = run(path, root, settings, figures=True)
     table = pd.read_csv(root / "protocolo_e1_e4" / "e1_e4.csv")
-    assert len(table) == 8 and set(table.correlacao) == {"pearson", "spearman"}
+    assert len(table) == 12 and set(table.correlacao) == {"pearson", "spearman", "pearson_sem_mercado"}
+    assert "particao_degenerada" in table and not table.loc[table.particao_degenerada, "melhor_qualidade"].any()
     assert table.melhor_equilibrio.any()
     assert summary["protocolo_e1_e4"]["status"] == "avaliado"
     assert (root / "protocolo_e1_e4" / "protocolo_metricas.png").is_file()

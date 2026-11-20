@@ -251,6 +251,9 @@ def protocol_partitions(tree, partitions, segments, root, seed, name="protocolo_
     save(fig, root, name)
 
 
+METHOD_LABELS = {"pearson": "Pearson", "spearman": "Spearman", "pearson_sem_mercado": "Pearson sem mercado"}
+
+
 def protocol_metrics(table, root, name="protocolo_metricas"):
     """Barras lado a lado das métricas de qualidade e tempo médio com desvio."""
     metrics = [("modularidade_grafo_completo", "Modularidade no grafo completo"),
@@ -269,13 +272,16 @@ def protocol_metrics(table, root, name="protocolo_metricas"):
             values = pd_to_float(rows[column])
             err = pd_to_float(rows["tempo_desvio_ms"]) if column == "tempo_medio_ms" else None
             ax.bar(x + (i - (len(methods) - 1) / 2) * width, values, width, yerr=err,
-                   color=colors[i % len(colors)], label=method.capitalize(), capsize=3)
+                   color=colors[i % len(colors)], label=METHOD_LABELS.get(method, method), capsize=3)
         ax.set_xticks(x, experiments)
         ax.set_title(title, fontsize=11)
         ax.axhline(0, color="#333", linewidth=.6)
         ax.grid(axis="y", alpha=.2)
     axes[0].legend(fontsize=9)
-    fig.suptitle("Protocolo E1–E4: qualidade e custo", fontsize=14, fontweight="bold")
+    degenerate = table[table.get("particao_degenerada", False) == True]  # noqa: E712
+    note = ("" if degenerate.empty else "\nSem barra de Silhouette = partição degenerada (um grupo só): "
+            + ", ".join(f"{r.experimento} {METHOD_LABELS.get(r.correlacao, r.correlacao)}" for r in degenerate.itertuples()))
+    fig.suptitle("Protocolo E1–E4: qualidade e custo" + note, fontsize=13, fontweight="bold")
     fig.tight_layout()
     save(fig, root, name)
 

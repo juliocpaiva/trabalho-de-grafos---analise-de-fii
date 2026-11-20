@@ -16,7 +16,7 @@ export const api = {
   funds: () => getJson("/api/funds"),
   fund: (ticker) => getJson(`/api/funds/${encodeURIComponent(ticker)}`),
   network: (relation) => getJson(`/api/network?relation=${relation}`),
-  tree: (color) => getJson(`/api/tree?color=${color}`),
+  tree: (color, variant) => getJson(`/api/tree?color=${color}&variant=${variant}`),
   pairs: (params) => getJson(`/api/pairs?${new URLSearchParams(params)}`),
   protocol: () => getJson("/api/protocol"),
   portfolios: () => getJson("/api/portfolios"),

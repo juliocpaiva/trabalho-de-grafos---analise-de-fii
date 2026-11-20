@@ -142,3 +142,6 @@ tr.clickable { cursor: pointer; } tr:hover td { background: #f8fbfc; }
   .run-controls { flex-wrap: wrap; } .preservation .bars div { grid-template-columns: 1fr 1fr 40px; }
 }
 details summary { cursor: pointer; color: var(--teal); font-weight: 700; font-size: 13px; margin: 6px 0; }
+.degenerate { color: #a35a12; font-weight: 800; cursor: help; }
+.notice.warn-notice { display: block; background: var(--orange-soft); border-color: #efcf9f; color: #6b3d0c; line-height: 1.5; }
+.preservation .compare { max-width: 760px; }

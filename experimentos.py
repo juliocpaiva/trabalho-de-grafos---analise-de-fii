@@ -20,7 +20,7 @@ import visualizacao as plots
 from algo_louvain import communities
 from algo_mst import kruskal
 from comparacao_modelos import compare_models
-from indicadores import fund_indicators
+from indicadores import fund_indicators, load_benchmark, remove_market_mode
 from protocolo import ProtocolSettings, rank, run_protocol, tree_preservation
 
 
@@ -120,17 +120,29 @@ def _write_json(path, data_):
 
 
 def _protocol_stage(returns, train, test, names, corr, spearman, profile, settings, output, figures):
-    """Roda E1–E4 com Pearson (base) e Spearman (variação) e grava as saídas."""
+    """Roda E1–E4 com três correlações e grava as saídas.
+
+    pearson (base), spearman (por postos) e pearson_sem_mercado (Pearson dos
+    resíduos depois de retirar o movimento comum do mercado; ver
+    indicadores.remove_market_mode).
+    """
     folder = Path(output) / "protocolo_e1_e4"
     folder.mkdir(parents=True, exist_ok=True)
     config = ProtocolSettings(resolution=settings.resolution, seed=settings.seed,
                               repeats=settings.protocol_repeats)
+    market = None
+    if settings.ifix_path and Path(settings.ifix_path).is_file():
+        market = load_benchmark(settings.ifix_path, returns.index)
+    residuals = remove_market_mode(returns[names], market, minimum=settings.min_overlap)
+    residual_corr, _ = graph.correlation(residuals, settings.min_overlap)
+    variants = (("pearson", corr, returns, "pearson"), ("spearman", spearman, returns, "spearman"),
+                ("pearson_sem_mercado", residual_corr, residuals, "pearson"))
     tables, partitions, summary = [], {}, {}
-    for label, matrix, method in (("pearson", corr, "pearson"), ("spearman", spearman, "spearman")):
+    for label, matrix, source, method in variants:
         windows = None
         if len(train) >= settings.min_overlap and len(test) >= settings.min_overlap:
-            windows = (graph.correlation(train[names], settings.min_overlap, method)[0],
-                       graph.correlation(test[names], settings.min_overlap, method)[0])
+            windows = (graph.correlation(source.loc[train.index, names], settings.min_overlap, method)[0],
+                       graph.correlation(source.loc[test.index, names], settings.min_overlap, method)[0])
         table, parts, structures = run_protocol(matrix, config, profile.segment, label, windows)
         tables.append(table)
         partitions[label] = parts
@@ -145,6 +157,12 @@ def _protocol_stage(returns, train, test, names, corr, spearman, profile, settin
     result.to_csv(folder / "e1_e4.csv", index=False)
     best = {label: result.loc[result[label], ["experimento", "correlacao"]].astype(str).agg(" ".join, axis=1).tolist()
             for label in ("melhor_qualidade", "melhor_custo", "melhor_equilibrio")}
+    summary["modo_de_mercado"] = {
+        "referencia": "IFIX (B3)" if market is not None else "média dos outros FIIs da amostra",
+        "rho_medio_antes": float(np.nanmean(corr.where(~np.eye(len(corr), dtype=bool)).to_numpy())),
+        "rho_medio_depois": float(np.nanmean(residual_corr.where(~np.eye(len(residual_corr), dtype=bool)).to_numpy())),
+    }
+    residual_corr.to_csv(folder / "correlacoes_sem_mercado.csv")
     summary.update({"status": "avaliado", "repeticoes": config.repeats, "epsilon": config.epsilon,
                     "vencedores": best, "tabela": str(folder / "e1_e4.csv")})
     if figures:
