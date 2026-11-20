@@ -1,0 +1,311 @@
+{
+  "start": "2024-11-14",
+  "end_exclusive": "2026-11-14",
+  "collected_utc": "2026-11-20T19:46:14.271559+00:00",
+  "market": [
+    {
+      "ticker": "ABCP11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "ALZR11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "BCRI11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "BRCO11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "BRCR11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "BTHF11.SA",
+      "source": "yfinance",
+      "rows": 468,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "BTLG11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "CPTS11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "CVBI11.SA",
+      "source": null,
+      "rows": 0,
+      "attempt_errors": [
+        "yfinance: YFTzMissingError: $CVBI11.SA: possibly delisted; no timezone found",
+        "Yahoo Finance Chart: HTTPError: 404 Client Error: Not Found for url: https://query1.finance.yahoo.com/v8/finance/chart/CVBI11.SA?period1=1731553200&period2=1794625200&interval=1d&events=div%2Csplits%2CcapitalGain"
+      ]
+    },
+    {
+      "ticker": "GARE11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "GGRC11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "HGBL11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "HGBS11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "HGLG11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "HGRE11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "HGRU11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "HSLG11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "HSML11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "JSRE11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "KFOF11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "KNCR11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "KNIP11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "KNRI11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "KNSC11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "LVBI11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "MALL11.SA",
+      "source": null,
+      "rows": 0,
+      "attempt_errors": [
+        "yfinance: YFTzMissingError: $MALL11.SA: possibly delisted; no timezone found",
+        "Yahoo Finance Chart: HTTPError: 404 Client Error: Not Found for url: https://query1.finance.yahoo.com/v8/finance/chart/MALL11.SA?period1=1731553200&period2=1794625200&interval=1d&events=div%2Csplits%2CcapitalGain"
+      ]
+    },
+    {
+      "ticker": "MXRF11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "PVBI11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "RBRR11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "RBVA11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "RCRB11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "RECR11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "RECT11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "SHPH11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "TRXF11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "VGIR11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "VILG11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "VINO11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "VISC11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "XPCI11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "XPLG11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    },
+    {
+      "ticker": "XPML11.SA",
+      "source": "yfinance",
+      "rows": 496,
+      "duplicates_removed": 0,
+      "attempt_errors": []
+    }
+  ],
+  "cvm_errors": {},
+  "files_sha256": {
+    "market.csv": "6aed18651f128832e5d0a4dabf245d41658771de27bbf1eeeb11cc02bf5ec1cb",
+    "universe.csv": "64fabebd9ad1263288674894dce61177e3fc68a0cecfb87d877341381be93a94",
+    "fundamentals.csv": "1a5e7cdf190d340b8bb8945fdb7a5030eade80bc40b7d30d646e575f9c12fd7a"
+  }
+}
