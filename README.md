@@ -248,18 +248,19 @@ git push -u origin sua-branch       # e abra um Pull Request para a main
 - [ ] Documentar a procedência da lista de 42 FIIs.
 - [ ] Relatório no template oficial (até 9 páginas, introdução de 1 página).
 - [ ] Slides de ~15 min e roteiro da demonstração.
-- [ ] Preencher a tabela de equipe abaixo e `docs/responsabilidades.md`.
+- [ ] Completar a tabela de equipe abaixo (orador e demais papéis) e `docs/responsabilidades.md`.
 
 ## Equipe
 
-| Nome | Papel |
-|---|---|
-| Júlio | Desenvolvimento: base da análise, coleta, Kruskal e Louvain |
-| Rodrigo Braz | Desenvolvimento: redes por sinal e painel interativo |
-| Thiago | Desenvolvimento: painel React e API FastAPI |
-| A preencher | Orador |
-| A preencher | Modelagem |
-| A preencher | Modelagem |
+| Nome | Papel | O que implementou |
+|---|---|---|
+| Gustavo Gonçalves | Desenvolvimento e modelagem | Protocolo E1–E4 (`protocolo.py`): pesos proporcional e distância inversa, Louvain na árvore de Kruskal, modularidade, Silhouette, estabilidade, tempo, memória e ranking; correlação de Spearman; remoção do modo de mercado; indicadores por FII (`indicadores.py`); reconstrução do painel React em abas e da API FastAPI (análise em segundo plano, rotas novas, correções); 13 testes; integração das branches; este README |
+| Júlio | Desenvolvimento | Base da análise: coleta Yahoo/CVM, quarentena B3, Pearson, rede com limiar, Louvain, Kruskal, centralidades, carteiras A × B, choques e comparação Pearson × peso composto |
+| Rodrigo Braz | Desenvolvimento | Redes direta e inversa por sinal da correlação e o painel offline `dashboard.html` |
+| Thiago | Desenvolvimento | Primeira versão do painel React e da API FastAPI |
+| A preencher | Orador | |
+
+O histórico completo de cada contribuição está no `git log`.
 
 ---
 SMAC03 · UNIFEI · 2026
