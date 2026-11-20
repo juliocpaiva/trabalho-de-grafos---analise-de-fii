@@ -22,7 +22,7 @@ Organizado pelas fases da metodologia CRISP-NET e pelas etapas 1–10 do checkli
 | **5 · Grafos e pesos** | Rede com limiar, redes direta/inversa por sinal, grafo completo com peso proporcional e com distância inversa | ✅ Implementada |
 | **6–7 · Comunidades** | Louvain direto e Kruskal → Louvain na árvore | ✅ Implementada |
 | **8 · Experimentos E1–E4** | Modularidade, Silhouette, coesão, estabilidade, tempo e memória, com vencedores | ✅ Implementada · ⏳ rodar com os dados reais |
-| **9 · Visualização** | Figuras PNG e painel interativo `dashboard.html` com a seção E1–E4 | ✅ Concluída |
+| **9 · Visualização** | Painel web (React + FastAPI) com rede, E1–E4, árvore, pares, carteiras e indicadores; figuras PNG; `dashboard.html` offline | ✅ Concluída |
 | **10 · Relatório e apresentação** | Relatório (até 9 páginas), slides (~15 min), papéis do grupo | ⏳ A fazer |
 
 ## Como funciona
@@ -39,7 +39,9 @@ flowchart LR
     G2 --> KR[Kruskal] --> E34[E3/E4: Louvain na árvore]
     E12 & E34 --> M[Métricas e vencedores]
     G1 --> CA[Carteiras A × B e choques]
-    M & G1 & CA & I --> D[dashboard.html + CSV + PNG]
+    M & G1 & CA & I --> D[(outputs/experimentos: CSV, PNG, run.json)]
+    D --> API[API FastAPI] --> WEB[Painel React]
+    D --> H[dashboard.html offline]
 ```
 
 | Etapa | O que faz |
@@ -86,6 +88,32 @@ O professor pediu para não ficar com um método só: definir uma base de compar
 
 **Como ler.** Em grafo completo e denso, a modularidade fica baixa (perto de 0,02) mesmo com grupos bons; compare os experimentos entre si, não com o 0,3 dos livros. Na árvore, o Louvain tende a quebrar em mais grupos; a modularidade da própria árvore (`modularidade_estrutura`) é alta e **não** deve ser usada para comparar.
 
+## Painel web (React + FastAPI)
+
+O painel lê os resultados de `outputs/experimentos/` pela API e permite rodar uma nova análise sem sair do navegador.
+
+| Aba | O que mostra |
+|---|---|
+| **Rede** | Rede direta (ρ ≥ τ) ou inversa (ρ ≤ −τ); cor = comunidade, formato = segmento; busca, zoom e clique para abrir o perfil do FII |
+| **Experimentos E1–E4** | Vencedores (qualidade, custo, equilíbrio), tabela das 8 execuções com o melhor de cada coluna em verde, quanto a árvore preserva as comunidades e as figuras do protocolo |
+| **Árvore de Kruskal** | A árvore colorida pela rede com limiar ou pelos grupos de E1, E2, E3 ou E4, com distâncias opcionais |
+| **Pares** | Pares mais correlacionados, com filtro "só segmentos diferentes", Pearson × Spearman e relações opostas |
+| **Carteiras** | Retorno acumulado de A (por segmento) × B (por comunidade), métricas lado a lado e composição |
+| **Indicadores** | Tabela ordenável da etapa 3: retorno, volatilidade, drawdown, beta, DY, P/VP, volume e patrimônio |
+
+O perfil do FII (ao lado da rede e da árvore) mostra indicadores, a comunidade em cada experimento e os pares mais correlacionados, com os de outro segmento em laranja.
+
+| Rota da API | Conteúdo |
+|---|---|
+| `GET /api/summary` | Resumo da execução e vencedores E1–E4 |
+| `GET /api/network?relation=direct\|inverse` | Nós com posições e arestas |
+| `GET /api/tree?color=louvain\|E1…E4` | Árvore com posições e cores |
+| `GET /api/protocol` | Tabela E1–E4, vencedores e preservação |
+| `GET /api/pairs`, `/api/funds/{ticker}`, `/api/indicators`, `/api/portfolios` | Tabelas do painel |
+| `POST /api/analyze?tau=0.35&repeats=5` | Roda a análise em segundo plano; acompanhe em `GET /api/analyze/status` |
+
+Documentação interativa de todas as rotas em `http://127.0.0.1:8000/docs`.
+
 ## Saídas
 
 Tudo vai para `outputs/experimentos/` (análise completa) ou `outputs/simples/` (análise rápida).
@@ -108,10 +136,12 @@ Tudo vai para `outputs/experimentos/` (análise completa) ou `outputs/simples/` 
 ## Estrutura
 
 ```
+backend/           API FastAPI do painel
+frontend/          painel React (src/App.jsx e src/components/)
 config/            amostra de FIIs, auditoria B3, quarentena e (opcional) ifix.csv
 data/cache/        snapshot dos dados coletados, para rodar offline
 docs/              metodologia, resultados de referência e roteiro da apresentação
-tests/             24 testes com dados sintéticos
+tests/             27 testes com dados sintéticos (análise, protocolo e API)
 coletar.py         baixa os dados
 main.py            roda a análise (rápida ou completa)
 fii_network.py     CLI com mais opções (collect, analyze, inspect)
@@ -155,7 +185,16 @@ python -m fii_network inspect HGLG11 --output outputs/experimentos   # consulta 
 python -m pytest -q                           # testes
 ```
 
-Opções úteis: `--limiar 0.45` muda o corte da rede, `--saida outputs/teste` grava em outra pasta, `--sem-navegador` não abre o painel. No VS Code, as mesmas tarefas estão em **Terminal → Executar Tarefa**.
+Opções úteis: `--limiar 0.45` muda o corte da rede, `--saida outputs/teste` grava em outra pasta, `--sem-navegador` não abre o `dashboard.html`. No VS Code, as mesmas tarefas estão em **Terminal → Executar Tarefa** (usam o Python escolhido em *Python: Select Interpreter*, em Windows, WSL ou Linux).
+
+**Painel web.** Precisa do Node.js LTS (no WSL/Ubuntu: `sudo apt install -y nodejs npm`, ou `nvm install --lts`).
+
+```bash
+cd frontend && npm install && npm run build && cd ..   # compila o painel (uma vez e após mudar o front)
+uvicorn backend.main:app --host 127.0.0.1 --port 8000  # abra http://127.0.0.1:8000
+```
+
+Para desenvolver o front com atualização automática, rode a API num terminal e `cd frontend && npm run dev` noutro; abra `http://localhost:5173`. No VS Code, as tarefas **FIIs: 6**, **7** e **8** fazem o mesmo.
 
 **Beta contra o IFIX.** O Yahoo não fornece o IFIX. Baixe a série no site da B3 (Índices → IFIX → Estatísticas históricas) e salve como `config/ifix.csv` com as colunas `date,close`. Sem esse arquivo, o beta usa a média igual da amostra e a tabela avisa isso na coluna `beta_referencia`.
 
@@ -176,7 +215,7 @@ git push -u origin sua-branch       # e abra um Pull Request para a main
 - Um assunto por branch: `feat/...` para código novo, `docs/...` para texto. Antes de abrir o PR, faça `git merge origin/main` para não divergir como aconteceu com `Testes-Rodrigo`.
 - Toda função nova ganha um teste em `tests/` com dados sintéticos em que a resposta é conhecida.
 - Para comparar execuções, grave em pastas diferentes (`--saida`) e confira o `run.json` de cada uma.
-- **Suba** `data/cache/` (o snapshot de referência) e `config/`. **Não suba** `outputs/`, `.venv/` nem `data/coleta_api/`.
+- **Suba** `data/cache/` (o snapshot de referência) e `config/`. **Não suba** `outputs/`, `.venv/`, `data/coleta_api/`, `frontend/node_modules/` nem `frontend/dist/`.
 
 ## Limitações
 
@@ -195,6 +234,7 @@ git push -u origin sua-branch       # e abra um Pull Request para a main
 - [x] Pesos proporcional e distância inversa no grafo completo.
 - [x] Louvain na árvore de Kruskal e protocolo E1–E4 com métricas.
 - [x] Indicadores por FII (retorno, drawdown, volume médio, beta).
+- [x] Painel React + FastAPI com abas de rede, E1–E4, árvore, pares, carteiras e indicadores; análise em segundo plano.
 - [ ] Subir `data/cache/` para o Git, para qualquer um rodar offline.
 - [ ] Baixar o IFIX da B3 para `config/ifix.csv`.
 - [ ] Rodar `python main.py --experimentos` com os dados reais e registrar os vencedores em `docs/resultados_referencia.md`.
@@ -209,6 +249,7 @@ git push -u origin sua-branch       # e abra um Pull Request para a main
 |---|---|
 | Júlio | Desenvolvimento: base da análise, coleta, Kruskal e Louvain |
 | Rodrigo Braz | Desenvolvimento: redes por sinal e painel interativo |
+| Thiago | Desenvolvimento: painel React e API FastAPI |
 | A preencher | Orador |
 | A preencher | Modelagem |
 | A preencher | Modelagem |

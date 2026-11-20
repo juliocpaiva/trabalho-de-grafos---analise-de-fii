@@ -22,8 +22,7 @@ def heatmap(table, root, name, title, corr=False):
     # A escala de Pearson é fixa de -1 a +1 e o cinza identifica lacunas.
     n = max(table.shape)
     fig, ax = plt.subplots(figsize=(max(6, n * .23), max(3.1, len(table.index) * .23 + 1)))
-    palette = plt.get_cmap("RdBu_r" if corr else "Blues").copy()
-    palette.set_bad("#ddd")
+    palette = plt.get_cmap("RdBu_r" if corr else "Blues").with_extremes(bad="#ddd")
     img = ax.imshow(table.to_numpy(dtype=float), aspect="auto", cmap=palette,
                     vmin=-1 if corr else 0, vmax=1 if corr else None)
     short = lambda x: str(x).removesuffix(".SA")
