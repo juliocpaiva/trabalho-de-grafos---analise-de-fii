@@ -8,7 +8,28 @@ import pytest
 
 import carteiras_choques as analysis
 import fonte_yfinance as data
+import main as application
 from experimentos import Settings, run
+
+
+def test_main_opens_dashboard_after_analysis(monkeypatch, tmp_path, capsys):
+    launched = []
+
+    def analyze(cache, output, tau):
+        output.mkdir(parents=True, exist_ok=True)
+        (output / "dashboard.html").write_text("<html></html>", encoding="utf-8")
+
+    def open_browser(uri, new):
+        launched.append((uri, new))
+        return False
+
+    monkeypatch.setattr(application, "analisar", analyze)
+    monkeypatch.setattr(application.webbrowser, "open", open_browser)
+    application.main(["--saida", str(tmp_path)])
+
+    expected = (tmp_path / "dashboard.html").resolve()
+    assert launched == [(expected.as_uri(), 2)]
+    assert str(expected) in capsys.readouterr().err
 
 
 def test_metrics_count_initial_drawdown():
@@ -90,16 +111,26 @@ def test_offline_run_exports_auditable_outputs(cache):
     settings = Settings(cutoff=str(dates[24].date()), tau=.7, min_days=10, min_overlap=8,
                         min_test_days=10, portfolio_size=2, min_events=1)
     summary = run(path, root, settings, figures=False)
+    assert summary["dashboard"] == str(root / "dashboard.html")
     assert summary["graph"]["communities"] == 2
     assert summary["kruskal"]["edges"] == 3 and summary["temporal"]["common_assets"] == 4
     assert summary["portfolios"] == "avaliada"
     assert nx.is_tree(nx.read_graphml(root / "kruskal.graphml"))
     comparison = summary["comparacao_modelos"]
     assert comparison["compared_funds"] == 4 and comparison["pares_comparados"] == 6
+    assert set(summary["signed_communities"]) == {"direct", "inverse"}
     comparison_path = root / "comparacao_modelos"
     assert set(pd.read_csv(comparison_path / "comparacao.csv").modelo) == {"pearson", "composto"}
     assert len(pd.read_csv(comparison_path / "kruskal_composto.csv")) == 3
     assert set(nx.read_graphml(comparison_path / "rede_composto.graphml")) == {"T1", "T2", "T3", "T4"}
+    assert set(nx.read_graphml(root / "inverse_similarity.graphml")) == {"T1", "T2", "T3", "T4"}
+    assert {"direct_community", "inverse_community"}.issubset(
+        pd.read_csv(root / "fund_profiles.csv").columns)
+    assert {"rho", "relation", "strength", "overlap"}.issubset(
+        pd.read_csv(root / "signed_edges.csv").columns)
+    dashboard = (root / "dashboard.html").read_text(encoding="utf-8")
+    assert "Relacionamentos entre FIIs" in dashboard and 'id="inverse-tab"' in dashboard
+    assert "cdn." not in dashboard
     assert pd.read_csv(root / "pairs.csv").rho.count() == 6
     assert len(pd.read_csv(root / "sensitivity.csv")) == 15
     assert pd.read_csv(root / "portfolio_metrics.csv").days.tolist() == [25, 25]

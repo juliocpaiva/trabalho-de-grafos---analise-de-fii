@@ -48,6 +48,40 @@ def similarity(corr, tau):
     return g
 
 
+def signed_similarity(corr, tau, overlap=None):
+    """Cria redes separadas para associações diretas e inversas fortes."""
+    direct = similarity(corr, tau)
+    direct.graph["relation"] = "direta"
+    for a, b in direct.edges:
+        direct[a][b]["rho"] = float(corr.at[a, b])
+        if overlap is not None:
+            direct[a][b]["overlap"] = int(overlap.at[a, b])
+
+    inverse = nx.Graph(tau=tau, relation="inversa")
+    inverse.add_nodes_from(sorted(corr.columns))
+    for a, b in combinations(inverse.nodes, 2):
+        rho = corr.loc[a, b]
+        if pd.notna(rho) and rho <= -tau:
+            strength = abs(float(rho))
+            inverse.add_edge(a, b, weight=strength, rho=float(rho),
+                             cost=round(1_000_000 / strength))
+            if overlap is not None:
+                inverse[a][b]["overlap"] = int(overlap.at[a, b])
+    return direct, inverse
+
+
+def signed_pairs(corr, overlap, tau):
+    """Lista pares que atingem o limiar em qualquer uma das duas direções."""
+    if not 0 < tau <= 1:
+        raise ValueError("O limiar deve estar em (0, 1].")
+    result = pairs(corr, overlap)
+    result = result.loc[result.rho.ge(tau) | result.rho.le(-tau)].copy()
+    result["relation"] = result.rho.map(lambda rho: "direta" if rho > 0 else "inversa")
+    result["strength"] = result.rho.abs()
+    return result.sort_values(["strength", "a", "b"], ascending=[False, True, True],
+                              kind="stable").reset_index(drop=True)
+
+
 # As faixas são fixas em reais e podem ser revistas sem trocar o algoritmo.
 # Usamos 60% para o comportamento dos retornos e 20% para cada atributo.
 PROPERTY_BANDS_BRL = (100_000_000, 500_000_000, 1_000_000_000)

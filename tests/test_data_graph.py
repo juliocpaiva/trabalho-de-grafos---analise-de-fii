@@ -55,6 +55,29 @@ def test_signed_pearson_and_minimum_overlap():
     assert not g.is_directed() and not list(nx.selfloop_edges(g))
 
 
+def test_signed_similarity_separates_direct_and_inverse_pairs():
+    names = ["A", "B", "C", "D"]
+    corr = pd.DataFrame([
+        [1.0, .85, -.90, .20],
+        [.85, 1.0, -.10, -.75],
+        [-.90, -.10, 1.0, .15],
+        [.20, -.75, .15, 1.0],
+    ], index=names, columns=names)
+    overlap = pd.DataFrame(100, index=names, columns=names)
+
+    direct, inverse = graph.signed_similarity(corr, .70)
+    pairs = graph.signed_pairs(corr, overlap, .70).set_index(["a", "b"])
+
+    assert set(direct.edges) == {("A", "B")}
+    assert set(inverse.edges) == {("A", "C"), ("B", "D")}
+    assert inverse["A"]["C"]["weight"] == pytest.approx(.90)
+    assert inverse["A"]["C"]["rho"] == pytest.approx(-.90)
+    assert pairs.relation.to_dict() == {
+        ("A", "C"): "inversa", ("A", "B"): "direta", ("B", "D"): "inversa"
+    }
+    assert set(direct) == set(inverse) == set(names)
+
+
 def test_modularity_of_known_communities_and_empty_network():
     c = pd.DataFrame(.05, index=list("ABCDEFG"), columns=list("ABCDEFG"))
     for group in ("ABC", "DEF"):
