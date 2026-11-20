@@ -145,3 +145,5 @@ details summary { cursor: pointer; color: var(--teal); font-weight: 700; font-si
 .degenerate { color: #a35a12; font-weight: 800; cursor: help; }
 .notice.warn-notice { display: block; background: var(--orange-soft); border-color: #efcf9f; color: #6b3d0c; line-height: 1.5; }
 .preservation .compare { max-width: 760px; }
+.published { display: grid; gap: 6px; justify-items: end; text-align: right; }
+.badge.info { background: var(--teal-soft); color: #0e4d57; margin-left: 0; }

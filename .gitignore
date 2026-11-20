@@ -13,3 +13,4 @@ outputs/
 data/coleta_api/
 frontend/node_modules/
 frontend/dist/
+frontend/public/data/

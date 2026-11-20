@@ -145,6 +145,8 @@ Tudo vai para `outputs/experimentos/` (análise completa) ou `outputs/simples/` 
 ```
 backend/           API FastAPI do painel
 frontend/          painel React (src/App.jsx e src/components/)
+exportar_site.py   gera os dados da versão publicada (GitHub Pages)
+.github/workflows/ publicação automática do painel
 config/            amostra de FIIs, auditoria B3, quarentena e (opcional) ifix.csv
 data/cache/        snapshot dos dados coletados, para rodar offline
 docs/              metodologia, resultados de referência e roteiro da apresentação
@@ -203,6 +205,13 @@ uvicorn backend.main:app --host 127.0.0.1 --port 8000  # abra http://127.0.0.1:8
 
 Para desenvolver o front com atualização automática, rode a API num terminal e `cd frontend && npm run dev` noutro; abra `http://localhost:5173`. No VS Code, as tarefas **FIIs: 6**, **7** e **8** fazem o mesmo.
 
+**Site publicado (GitHub Pages).** O painel também fica online, em versão estática, em `https://juliocpaiva.github.io/trabalho-de-grafos---analise-de-fii/`. A cada push na `main`, o workflow `.github/workflows/pages.yml` roda a análise sobre `data/cache`, gera os dados do site com `python exportar_site.py` e publica o React compilado com `VITE_STATIC=1`. Na versão publicada tudo é navegável, mas o botão "Executar análise" não aparece: os resultados já vêm calculados. Para testar localmente:
+
+```bash
+python exportar_site.py
+cd frontend && VITE_STATIC=1 npm run build && npx vite preview
+```
+
 **Beta contra o IFIX.** O Yahoo não fornece o IFIX. Baixe a série no site da B3 (Índices → IFIX → Estatísticas históricas) e salve como `config/ifix.csv` com as colunas `date,close`. Sem esse arquivo, o beta usa a média igual da amostra e a tabela avisa isso na coluna `beta_referencia`.
 
 ## Como colaborar
@@ -242,6 +251,7 @@ git push -u origin sua-branch       # e abra um Pull Request para a main
 - [x] Louvain na árvore de Kruskal e protocolo E1–E4 com métricas.
 - [x] Indicadores por FII (retorno, drawdown, volume médio, beta).
 - [x] Painel React + FastAPI com abas de rede, E1–E4, árvore, pares, carteiras e indicadores; análise em segundo plano.
+- [x] Publicação automática do painel no GitHub Pages.
 - [ ] Subir `data/cache/` para o Git, para qualquer um rodar offline.
 - [ ] Baixar o IFIX da B3 para `config/ifix.csv`.
 - [ ] Rodar `python main.py --experimentos` com os dados reais e registrar os vencedores em `docs/resultados_referencia.md`.

@@ -1,0 +1,67 @@
+# Publica o painel no GitHub Pages a cada push na main.
+# Roda a análise sobre data/cache (sem internet), gera os JSONs com
+# exportar_site.py e compila o React em modo estático.
+name: Publicar painel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Instalar o projeto
+        run: pip install -e ".[test]"
+
+      - name: Rodar a análise com o snapshot de dados
+        run: python main.py --experimentos --cache data/cache --sem-navegador --repeticoes 30
+
+      - name: Gerar os dados do site
+        run: python exportar_site.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Compilar o painel
+        working-directory: frontend
+        env:
+          VITE_STATIC: "1"
+          VITE_BASE: /${{ github.event.repository.name }}/
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

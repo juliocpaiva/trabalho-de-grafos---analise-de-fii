@@ -1,4 +1,5 @@
 import React from "react";
+import { api } from "../api.js";
 import { methodName, num } from "../format.js";
 import Table from "./Table.jsx";
 
@@ -34,7 +35,7 @@ export default function ProtocolView({ data }) {
       ? <span className="degenerate" title="Partição degenerada: não separa os FIIs e não pode vencer">{r.comunidades} ⚠</span> : r.comunidades) },
     { ...metric("modularidade_grafo_completo"), label: "Modularidade" },
     { ...metric("silhouette"), label: "Silhouette" },
-    { ...metric("separacao"), label: "Separação ρ" },
+    { ...metric("separacao"), label: "Separação" },
     { ...metric("estabilidade_sementes"), label: "Estab. sementes" },
     { ...metric("estabilidade_temporal_ari"), label: "Estab. temporal" },
     { key: "ari_vs_segmento", label: "ARI × segmento", num: true, render: (r) => num(r.ari_vs_segmento) },
@@ -72,11 +73,11 @@ export default function ProtocolView({ data }) {
       </div>
       <div className="figures">
         {(data.images || []).filter((img) => !img.includes("particoes_")).map((img) => (
-          <figure key={img}><img src={`/api/images/${img}`} alt={img} loading="lazy" /><figcaption>{img.split("/").pop()}</figcaption></figure>
+          <figure key={img}><img src={api.image(img)} alt={img} loading="lazy" /><figcaption>{img.split("/").pop()}</figcaption></figure>
         ))}
         {(data.images || []).filter((img) => img.includes("particoes_")).map((img) => (
           <details key={img}><summary>Ver as partições E1–E4 com {methodName(img.split("particoes_").pop().replace(".png", ""))}</summary>
-            <figure><img src={`/api/images/${img}`} alt={img} loading="lazy" /></figure></details>
+            <figure><img src={api.image(img)} alt={img} loading="lazy" /></figure></details>
         ))}
       </div>
     </>

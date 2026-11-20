@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "./api.js";
+import { STATIC, api } from "./api.js";
 import { experimentName, methodName, num, short } from "./format.js";
 import FundProfile from "./components/FundProfile.jsx";
 import Graph from "./components/Graph.jsx";
@@ -73,7 +73,8 @@ export default function App() {
       soft(api.portfolios(), setPortfolios);
       soft(api.indicators(), setIndicators);
     } catch (e) {
-      setError(`Não foi possível falar com a API: ${e.message}. Ela está rodando? (uvicorn backend.main:app)`);
+      setError(STATIC ? `Não foi possível carregar os dados publicados: ${e.message}.`
+        : `Não foi possível falar com a API: ${e.message}. Ela está rodando? (uvicorn backend.main:app)`);
     }
   }, []);
 
@@ -125,11 +126,18 @@ export default function App() {
             {summary.source === "sintético" && <span className="badge warn">dados sintéticos de teste</span>}
           </p>}
         </div>
+        {STATIC ? (
+          <div className="published">
+            <span className="badge info">Versão publicada</span>
+            <p className="subtitle">Resultados pré-calculados{summary?.window?.last ? ` com dados até ${new Date(summary.window.last + "T12:00").toLocaleDateString("pt-BR")}` : ""}.<br />Para rodar outra análise, use o projeto localmente.</p>
+          </div>
+        ) : (
         <form className="run-controls" onSubmit={(e) => { e.preventDefault(); runAnalysis(); }}>
           <label>Limiar ρ<input type="number" min="0.05" max="0.95" step="0.05" value={tau} onChange={(e) => setTau(Number(e.target.value))} /></label>
           <label>Repetições E1–E4<input type="number" min="2" max="100" step="1" value={repeats} onChange={(e) => setRepeats(Number(e.target.value))} /></label>
           <button type="submit" disabled={running}>{running ? "Executando…" : "Executar análise"}</button>
         </form>
+        )}
       </header>
 
       {running && <div className="notice"><span className="spinner" />{job.message || "Executando a análise"} Pode levar cerca de 1 minuto; o painel atualiza sozinho.</div>}
