@@ -1,0 +1,65 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "FIIs: 1 - Análise rápida (offline)",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["main.py", "--cache", "data/cache"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "FIIs: 2 - Análise completa da versão 1 (offline)",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["main.py", "--experimentos", "--cache", "data/cache"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "FIIs: 3 - Consultar um FII nos resultados completos",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["-m", "fii_network", "inspect", "${input:fiiTicker}", "--top", "5", "--output", "outputs/experimentos"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "FIIs: 4 - Verificar testes",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["-m", "pytest", "-q"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "FIIs: 5 - Coletar dados (requer internet)",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["coletar.py"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "FIIs: 6 - Iniciar API FastAPI",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["-m", "uvicorn", "backend.main:app", "--reload", "--host", "127.0.0.1", "--port", "8000"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "FIIs: 7 - Iniciar frontend React",
+      "type": "process",
+      "command": "C:/Program Files/nodejs/npm.cmd",
+      "args": ["run", "dev"],
+      "options": {"cwd": "${workspaceFolder}/frontend", "env": {"PATH": "C:/Program Files/nodejs;${env:PATH}"}},
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {"id": "fiiTicker", "type": "promptString", "description": "Ticker para consultar (ex.: VISC11)", "default": "VISC11"}
+  ]
+}

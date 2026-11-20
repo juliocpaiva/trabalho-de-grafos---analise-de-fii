@@ -1,0 +1,4 @@
+ticker,start,end,reason,source
+RECR11.SA,2025-11-03,2025-11-06,Fechamentos incompatíveis com o mercado à vista da B3,config/auditoria_b3.csv
+RECT11.SA,2025-11-03,2025-11-06,Fechamentos incompatíveis com o mercado à vista da B3,config/auditoria_b3.csv
+XPML11.SA,2026-01-14,2026-01-16,Fechamentos incompatíveis com o mercado à vista da B3,config/auditoria_b3.csv

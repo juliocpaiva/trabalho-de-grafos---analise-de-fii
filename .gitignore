@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+data/cache/
+outputs/
+*.aux
+*.log
+*.bbl
+*.blg
+*.out
+data/coleta_api/
+frontend/node_modules/
+frontend/dist/
