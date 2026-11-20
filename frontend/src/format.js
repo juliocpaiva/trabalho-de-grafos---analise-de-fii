@@ -14,7 +14,9 @@ export function pct(value, digits = 1) {
   return valid(value) ? clean(value, digits + 2).toLocaleString("pt-BR", { style: "percent", maximumFractionDigits: digits, minimumFractionDigits: digits }) : "—";
 }
 
-export const experimentName = (text) => String(text ?? "").replace(/ (pearson|spearman)$/i, (_, m) => ` · ${m[0].toUpperCase()}${m.slice(1)}`);
+export const METHOD_LABELS = { pearson: "Pearson", spearman: "Spearman", pearson_sem_mercado: "Pearson sem mercado" };
+export const methodName = (m) => METHOD_LABELS[m] || m;
+export const experimentName = (text) => String(text ?? "").replace(/ (pearson_sem_mercado|pearson|spearman)$/i, (_, m) => ` · ${methodName(m)}`);
 
 // Marcas "redondas" para eixos (ex.: -6%, -4%, …, 2%).
 export function niceTicks(min, max, count = 5) {

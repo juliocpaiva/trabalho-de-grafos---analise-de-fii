@@ -40,7 +40,7 @@ def test_with_results_routes_return_dashboard_data(client, cache):
     assert client.get("/api/network?relation=inverse").status_code == 200
     tree = client.get("/api/tree?color=E3").json()
     assert len(tree["edges"]) == 3 and tree["color"] == "E3"
-    assert len(client.get("/api/protocol").json()["rows"]) == 8
+    assert len(client.get("/api/protocol").json()["rows"]) == 12
     fund = client.get("/api/funds/t1").json()
     assert fund["ticker"] == "T1" and fund["pairs"]
     assert client.get("/api/pairs?cross_segment=true").status_code == 200

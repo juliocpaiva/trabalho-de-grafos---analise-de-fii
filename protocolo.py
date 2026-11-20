@@ -2,8 +2,8 @@
 
 | Exp. | Peso                         | Detecção                               |
 |------|------------------------------|----------------------------------------|
-| E1   | proporcional, (1 + ρ) / 2    | Louvain no grafo completo              |
-| E2   | distância inversa, 1/(d + ε) | Louvain no grafo completo              |
+| E1   | proporcional, max(ρ, 0)      | Louvain no grafo completo              |
+| E2   | distância inversa, 1/(d+ε) − 1/(√2+ε) | Louvain no grafo completo     |
 | E3   | proporcional                 | Kruskal → Louvain na árvore            |
 | E4   | distância inversa            | Kruskal → Louvain na árvore            |
 
@@ -52,8 +52,10 @@ def tree_graph(corr, model, epsilon=INVERSE_EPSILON):
     tree = nx.Graph(model=model, epsilon=epsilon)
     tree.add_nodes_from(forest.nodes)
     for a, b, attrs in forest.edges(data=True):
-        tree.add_edge(a, b, rho=attrs["rho"], distance=attrs["distance"],
-                      weight=edge_weight(attrs["rho"], model, epsilon))
+        weight = edge_weight(attrs["rho"], model, epsilon)
+        # Ligações da árvore com ρ ≤ 0 só existem para conectar; peso zero = fora do Louvain.
+        if weight > 0:
+            tree.add_edge(a, b, rho=attrs["rho"], distance=attrs["distance"], weight=weight)
     return tree, summary
 
 
@@ -128,11 +130,19 @@ def _normalize(series, higher_is_better=True):
 
 
 def rank(table):
-    """Acrescenta notas de qualidade, custo e equilíbrio e marca os vencedores."""
+    """Acrescenta notas de qualidade, custo e equilíbrio e marca os vencedores.
+
+    Uma partição degenerada (todos num grupo só, ou cada FII sozinho) não
+    separa nada: a Silhouette fica indefinida e a estabilidade vale 1 por
+    trivialidade. Ela recebe nota de qualidade zero e não pode vencer.
+    """
     table = table.copy()
-    quality = pd.concat([_normalize(table.modularidade_grafo_completo),
-                         _normalize(table.silhouette), _normalize(table.estabilidade_sementes)],
-                        axis=1).mean(axis=1)
+    table["particao_degenerada"] = table.comunidades.le(1) | table.comunidades.ge(table.fiis)
+    valid = ~table.particao_degenerada
+    quality = pd.concat([_normalize(table.modularidade_grafo_completo.where(valid)),
+                         _normalize(table.silhouette.where(valid)),
+                         _normalize(table.estabilidade_sementes.where(valid))],
+                        axis=1).mean(axis=1).where(valid, 0.0)
     cost = pd.concat([_normalize(table.tempo_medio_ms, higher_is_better=False),
                       _normalize(table.memoria_pico_kb, higher_is_better=False)], axis=1).mean(axis=1)
     table["nota_qualidade"] = quality.round(4)
@@ -141,7 +151,8 @@ def rank(table):
                                 + BALANCE_WEIGHTS["custo"] * cost).round(4)
     for column, label in (("nota_qualidade", "melhor_qualidade"), ("nota_custo", "melhor_custo"),
                           ("nota_equilibrio", "melhor_equilibrio")):
-        table[label] = table[column].eq(table[column].max())
+        candidates = table[column].where(valid) if label != "melhor_custo" else table[column]
+        table[label] = candidates.eq(candidates.max()) & candidates.notna()
     return table
 
 

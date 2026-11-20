@@ -18,25 +18,26 @@ def _blocks(seed=7, days=300, size=4, noise=.004):
     return pd.DataFrame(data, index=pd.bdate_range("2025-01-02", periods=days))
 
 
-def test_edge_weights_are_positive_and_increase_with_rho():
+def test_edge_weights_are_zero_without_relation_and_increase_with_rho():
     assert graph.edge_weight(1, "proporcional") == pytest.approx(1)
-    assert graph.edge_weight(0, "proporcional") == pytest.approx(.5)
-    assert graph.edge_weight(-1, "proporcional") == pytest.approx(0)
-    assert graph.edge_weight(1, "distancia_inversa", .05) == pytest.approx(20)
-    assert graph.edge_weight(-1, "distancia_inversa", .05) == pytest.approx(1 / 2.05)
+    assert graph.edge_weight(.4, "proporcional") == pytest.approx(.4)
+    assert graph.edge_weight(-.5, "proporcional") == 0
+    assert graph.edge_weight(1, "distancia_inversa", .05) == pytest.approx(20 - 1 / (2 ** .5 + .05))
     for model in graph.WEIGHT_MODELS:
-        values = [graph.edge_weight(r, model) for r in np.linspace(-1, 1, 21)]
+        assert graph.edge_weight(0, model) == pytest.approx(0) and graph.edge_weight(-1, model) == 0
+        values = [graph.edge_weight(r, model) for r in np.linspace(0.05, 1, 20)]
         assert all(b > a for a, b in zip(values, values[1:]))
     with pytest.raises(ValueError):
         graph.edge_weight(.5, "outro")
 
 
-def test_complete_graph_keeps_every_estimable_pair_including_negative():
-    names = list("ABC")
-    corr = pd.DataFrame([[1, .6, -.4], [.6, 1, np.nan], [-.4, np.nan, 1]], index=names, columns=names)
+def test_complete_graph_keeps_every_positive_pair_without_threshold():
+    names = list("ABCD")
+    corr = pd.DataFrame([[1, .6, -.4, .05], [.6, 1, np.nan, .1], [-.4, np.nan, 1, .2], [.05, .1, .2, 1]],
+                        index=names, columns=names)
     g = graph.complete_graph(corr, "proporcional")
-    assert set(g.nodes) == set(names) and g.number_of_edges() == 2
-    assert g["A"]["C"]["weight"] == pytest.approx(.3) and g["A"]["C"]["rho"] == pytest.approx(-.4)
+    assert set(g.nodes) == set(names) and g.number_of_edges() == 4
+    assert not g.has_edge("A", "C") and g["A"]["D"]["weight"] == pytest.approx(.05)
     dist = graph.distance_matrix(corr, missing=2 ** .5)
     assert np.allclose(np.diag(dist), 0) and dist.at["B", "C"] == pytest.approx(2 ** .5)
 
@@ -103,3 +104,25 @@ def test_fund_indicators_drawdown_beta_and_benchmark(tmp_path):
     pd.DataFrame({"date": dates, "close": level}).to_csv(tmp_path / "ifix.csv", index=False)
     table, source = indicadores.fund_indicators(returns, quote, volume, ifix_path=tmp_path / "ifix.csv")
     assert source == "IFIX (B3)" and table.at["X", "beta"] == pytest.approx(2, abs=1e-6)
+
+
+def test_degenerate_partition_cannot_win_quality():
+    table = pd.DataFrame({
+        "experimento": ["E1", "E3"], "fiis": [10, 10], "comunidades": [1, 3],
+        "modularidade_grafo_completo": [0.0, -0.01], "silhouette": [None, 0.05],
+        "estabilidade_sementes": [1.0, 0.9], "tempo_medio_ms": [5.0, 6.0], "memoria_pico_kb": [100.0, 90.0]})
+    ranked = protocolo.rank(table).set_index("experimento")
+    assert ranked.at["E1", "particao_degenerada"] and ranked.at["E1", "nota_qualidade"] == 0
+    assert ranked.at["E3", "melhor_qualidade"] and not ranked.at["E1", "melhor_qualidade"]
+    assert ranked.at["E3", "melhor_equilibrio"]
+
+
+def test_removing_market_mode_keeps_sector_links_and_drops_common_factor():
+    rng = np.random.default_rng(1)
+    market, sector = rng.normal(0, .01, 400), rng.normal(0, .006, 400)
+    returns = pd.DataFrame({**{f"A{i}": market + sector + rng.normal(0, .004, 400) for i in range(6)},
+                            **{f"B{i}": market + rng.normal(0, .006, 400) for i in range(6)}})
+    before = returns.corr()
+    after = indicadores.remove_market_mode(returns).corr()
+    assert before.at["A0", "B0"] > .5 and after.at["A0", "B0"] < .1
+    assert after.at["A0", "A1"] > .2

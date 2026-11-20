@@ -62,25 +62,31 @@ def distance_matrix(corr, missing=None):
 
 
 def edge_weight(rho, model, epsilon=INVERSE_EPSILON):
-    """Peso de uma aresta no grafo completo, sempre positivo.
+    """Peso de uma aresta no grafo completo: zero para ρ ≤ 0, crescente para ρ > 0.
 
-    proporcional: w = (1 + ρ) / 2, cresce em linha reta com ρ e vai de 0 a 1;
-    correlações negativas viram pesos pequenos, sem descartar o par.
-    distancia_inversa: w = 1 / (d + ε), cresce muito para pares quase
-    idênticos; ε evita divisão por zero quando ρ = 1.
+    proporcional: w = max(ρ, 0), cresce em linha reta com ρ.
+    distancia_inversa: w = 1/(d + ε) − 1/(√2 + ε), com d = sqrt(2(1 − ρ)).
+    O desconto 1/(√2 + ε) é o valor em ρ = 0 (d = √2); assim pares sem
+    relação valem zero, e ε evita divisão por zero quando ρ = 1.
+
+    Por que zerar ρ ≤ 0: um peso que nunca chega a zero, como (1 + ρ)/2,
+    vira uma constante em todas as arestas do grafo completo. A modularidade
+    compara cada aresta com essa média e não encontra grupos: nos dados de
+    FIIs, o Louvain juntou os 40 fundos num grupo só.
     """
     rho = max(-1.0, min(1.0, float(rho)))
     if model == "proporcional":
-        return (1 + rho) / 2
+        return max(rho, 0.0)
     if model == "distancia_inversa":
-        return 1 / ((2 * (1 - rho)) ** .5 + epsilon)
+        return max(0.0, 1 / ((2 * (1 - rho)) ** .5 + epsilon) - 1 / (2 ** .5 + epsilon))
     raise ValueError(f"Modelo de peso desconhecido: {model}. Use {', '.join(WEIGHT_MODELS)}.")
 
 
 def complete_graph(corr, model, epsilon=INVERSE_EPSILON):
-    """Grafo completo ponderado: uma aresta para cada par com ρ estimável.
+    """Grafo completo ponderado: uma aresta para cada par com ρ > 0 estimável.
 
-    Diferente da rede limiarizada, nenhum par é descartado por ser fraco.
+    Diferente da rede limiarizada, nenhum par positivo é descartado por ser
+    fraco (não há limiar τ). Pares com ρ ≤ 0 têm peso zero e ficam de fora.
     Cada aresta guarda rho, distance e o weight do modelo escolhido.
     """
     g = nx.Graph(model=model, epsilon=epsilon)
@@ -89,8 +95,9 @@ def complete_graph(corr, model, epsilon=INVERSE_EPSILON):
         rho = corr.at[a, b]
         if pd.notna(rho):
             rho = max(-1.0, min(1.0, float(rho)))
-            g.add_edge(a, b, rho=rho, distance=(2 * (1 - rho)) ** .5,
-                       weight=edge_weight(rho, model, epsilon))
+            weight = edge_weight(rho, model, epsilon)
+            if weight > 0:
+                g.add_edge(a, b, rho=rho, distance=(2 * (1 - rho)) ** .5, weight=weight)
     return g
 
 

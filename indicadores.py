@@ -42,6 +42,37 @@ def benchmark_returns(returns, ifix_path=None):
     return proxy, "proxy: média igual da amostra"
 
 
+def remove_market_mode(returns, market=None, minimum=30):
+    """Retira de cada FII o movimento comum do mercado (regressão simples).
+
+    resíduo_i = r_i − (a_i + b_i · r_mercado), estimado nas datas em que os
+    dois existem. Em FIIs, quase todos os pares têm ρ > 0 porque o mercado
+    inteiro sobe e desce junto; esse "modo de mercado" domina o grafo
+    completo e faz o Louvain juntar tudo num grupo só. A correlação dos
+    resíduos mostra o que cada par tem em comum além do mercado
+    (MacMahon e Garlaschelli, Physical Review X, 2015).
+
+    Sem índice (market=None), o mercado de cada FII é a média igual dos
+    outros fundos da amostra, sem ele próprio, para não regredir o fundo
+    contra si mesmo.
+    """
+    residuals = pd.DataFrame(index=returns.index, columns=returns.columns, dtype=float)
+    total, count = returns.sum(axis=1, min_count=1), returns.count(axis=1)
+    for ticker in returns:
+        if market is None:
+            others = count - returns[ticker].notna()
+            reference = ((total - returns[ticker].fillna(0)) / others).where(others >= max(2, returns.shape[1] // 2))
+        else:
+            reference = market
+        joint = pd.concat([returns[ticker], reference], axis=1, keys=["y", "m"]).dropna()
+        if len(joint) < minimum or joint.m.var(ddof=1) <= 0:
+            continue
+        slope = joint.y.cov(joint.m) / joint.m.var(ddof=1)
+        intercept = joint.y.mean() - slope * joint.m.mean()
+        residuals.loc[joint.index, ticker] = joint.y - intercept - slope * joint.m
+    return residuals
+
+
 def beta(asset, market, minimum=30):
     """β = cov(ativo, índice) / var(índice), nas datas em que os dois existem."""
     joint = pd.concat([asset, market], axis=1).dropna()

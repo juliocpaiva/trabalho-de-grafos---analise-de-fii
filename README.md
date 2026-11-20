@@ -57,7 +57,7 @@ flowchart LR
 
 ## Experimentos E1–E4
 
-O professor pediu para não ficar com um método só: definir uma base de comparação, testar variações e mostrar com métricas qual é melhor. O protocolo cruza dois pesos com dois caminhos de detecção e roda tudo com Pearson (base) e Spearman (variação), num total de 8 execuções.
+O professor pediu para não ficar com um método só: definir uma base de comparação, testar variações e mostrar com métricas qual é melhor. O protocolo cruza dois pesos com dois caminhos de detecção e roda tudo com três correlações, num total de 12 execuções: Pearson (base), Spearman (por postos) e **Pearson sem mercado** (correlação do que sobra de cada FII depois de tirar o movimento comum do mercado).
 
 | Exp. | Peso da aresta | Detecção |
 |---|---|---|
@@ -66,7 +66,13 @@ O professor pediu para não ficar com um método só: definir uma base de compar
 | **E3** | Proporcional | Kruskal → Louvain na árvore |
 | **E4** | Distância inversa | Kruskal → Louvain na árvore |
 
-**Fórmulas.** Distância d = √(2·(1 − ρ)), que vai de 0 (ρ = 1) a 2 (ρ = −1). Peso proporcional = (1 + ρ)/2, entre 0 e 1. Peso por distância inversa = 1/(d + ε), com ε = 0,05 para evitar divisão por zero.
+**Fórmulas.** Distância d = √(2·(1 − ρ)), que vai de 0 (ρ = 1) a 2 (ρ = −1). Peso proporcional = max(ρ, 0). Peso por distância inversa = 1/(d + ε) − 1/(√2 + ε), com ε = 0,05 para evitar divisão por zero; o desconto faz o peso valer zero em ρ = 0.
+
+**Por que o peso é zero para ρ ≤ 0.** A primeira versão usava (1 + ρ)/2. Nos dados reais, o Louvain juntou os 40 FIIs num grupo só em E1 e E2: um peso que nunca chega a zero vira uma constante em todas as arestas do grafo completo, e a modularidade não enxerga grupos. Zerar os pares sem relação resolveu sem mudar a ordem dos pesos.
+
+**Por que tirar o mercado.** Em FIIs, quase todo par tem ρ > 0 porque o mercado inteiro sobe e desce junto (ρ médio de 0,33 na amostra). Esse "modo de mercado" esconde as relações próprias de cada grupo. A variante sem mercado regride cada FII contra o IFIX (ou, sem `config/ifix.csv`, contra a média dos outros FIIs) e correlaciona os resíduos ([MacMahon e Garlaschelli, 2015](https://doi.org/10.1103/PhysRevX.5.021006)).
+
+**Partição degenerada.** Se um experimento juntar todos os FIIs num grupo (ou deixar cada um sozinho), ele é marcado com ⚠ e não pode vencer em qualidade: a Silhouette fica indefinida e a estabilidade vale 1 por trivialidade.
 
 **Regras de modelagem.**
 - Correlações negativas entram com peso pequeno, não são descartadas; Louvain não aceita pesos negativos.
@@ -86,7 +92,7 @@ O professor pediu para não ficar com um método só: definir uma base de compar
 
 **Vencedores.** A nota de qualidade é a média normalizada de modularidade, Silhouette e estabilidade. A nota de custo é a média de tempo e memória. O equilíbrio vale 70% qualidade e 30% custo, porque com 40 FIIs todos os métodos rodam em milissegundos.
 
-**Como ler.** Em grafo completo e denso, a modularidade fica baixa (perto de 0,02) mesmo com grupos bons; compare os experimentos entre si, não com o 0,3 dos livros. Na árvore, o Louvain tende a quebrar em mais grupos; a modularidade da própria árvore (`modularidade_estrutura`) é alta e **não** deve ser usada para comparar.
+**Como ler.** Com Pearson bruto, a modularidade no grafo completo fica perto de zero porque o mercado domina; compare os experimentos entre si e com a variante sem mercado. Na árvore, o Louvain tende a quebrar em mais grupos; a modularidade da própria árvore (`modularidade_estrutura`) é alta e **não** deve ser usada para comparar.
 
 ## Painel web (React + FastAPI)
 
@@ -95,7 +101,7 @@ O painel lê os resultados de `outputs/experimentos/` pela API e permite rodar u
 | Aba | O que mostra |
 |---|---|
 | **Rede** | Rede direta (ρ ≥ τ) ou inversa (ρ ≤ −τ); cor = comunidade, formato = segmento; busca, zoom e clique para abrir o perfil do FII |
-| **Experimentos E1–E4** | Vencedores (qualidade, custo, equilíbrio), tabela das 8 execuções com o melhor de cada coluna em verde, quanto a árvore preserva as comunidades e as figuras do protocolo |
+| **Experimentos E1–E4** | Vencedores (qualidade, custo, equilíbrio), tabela das 12 execuções com o melhor de cada coluna em verde, quanto a árvore preserva as comunidades e as figuras do protocolo |
 | **Árvore de Kruskal** | A árvore colorida pela rede com limiar ou pelos grupos de E1, E2, E3 ou E4, com distâncias opcionais |
 | **Pares** | Pares mais correlacionados, com filtro "só segmentos diferentes", Pearson × Spearman e relações opostas |
 | **Carteiras** | Retorno acumulado de A (por segmento) × B (por comunidade), métricas lado a lado e composição |
@@ -121,7 +127,8 @@ Tudo vai para `outputs/experimentos/` (análise completa) ou `outputs/simples/` 
 | Arquivo | O que mostra |
 |---|---|
 | **dashboard.html** | Painel offline: redes direta e inversa, busca por ticker, comunidades, pares e tabela E1–E4. Abre sozinho ao terminar. |
-| **protocolo_e1_e4/e1_e4.csv** | As 8 execuções com todas as métricas, notas e vencedores |
+| **protocolo_e1_e4/e1_e4.csv** | As 12 execuções com todas as métricas, notas, vencedores e a marca de partição degenerada |
+| **protocolo_e1_e4/correlacoes_sem_mercado.csv** | Matriz de correlação dos resíduos, depois de tirar o movimento comum do mercado |
 | **protocolo_e1_e4/particoes_pearson.png** | E1–E4 lado a lado sobre a mesma árvore; cor = comunidade, formato = segmento |
 | **protocolo_e1_e4/protocolo_metricas.png** | Modularidade, Silhouette, estabilidade e tempo por experimento |
 | **indicadores_fundos.csv** | Tabela consolidada da etapa 3, um FII por linha |

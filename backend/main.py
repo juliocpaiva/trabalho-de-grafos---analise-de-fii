@@ -204,12 +204,18 @@ def network(relation: str = "direct"):
     return json_safe(payload)
 
 
+VARIANTS = ("pearson", "spearman", "pearson_sem_mercado")
+
+
 @app.get("/api/tree")
-def tree(color: str = "louvain"):
+def tree(color: str = "louvain", variant: str = "pearson"):
     """Árvore de Kruskal com posições Kamada-Kawai e cores por partição.
 
-    color = louvain (comunidades da rede com limiar) ou E1, E2, E3, E4.
+    color = louvain (comunidades da rede com limiar) ou E1, E2, E3, E4;
+    variant = correlação usada no protocolo (pearson, spearman, pearson_sem_mercado).
     """
+    if variant not in VARIANTS:
+        raise HTTPException(status_code=422, detail=f"variant deve ser uma de {', '.join(VARIANTS)}.")
     edges = read_csv("kruskal_edges.csv")
     profile = read_csv("fund_profiles.csv").set_index("ticker")
     g = nx.Graph()
@@ -219,7 +225,7 @@ def tree(color: str = "louvain"):
     pos = nx.kamada_kawai_layout(g, weight=None) if g.number_of_edges() else nx.circular_layout(g)
     membership = profile.community
     if color != "louvain":
-        partitions = read_csv("protocolo_e1_e4/particoes_pearson.csv", index_col="ticker", required=False)
+        partitions = read_csv(f"protocolo_e1_e4/particoes_{variant}.csv", index_col="ticker", required=False)
         if partitions is None or color not in partitions:
             raise HTTPException(status_code=404, detail=f"Partição {color} indisponível. Rode a análise completa.")
         membership = partitions[color].reindex(profile.index)
@@ -229,7 +235,7 @@ def tree(color: str = "louvain"):
               "community": int(membership.get(t, 0)) if pd.notna(membership.get(t)) else 0,
               "x": 40 + (pos[t][0] - min(xs)) / span_x * 920, "y": 40 + (pos[t][1] - min(ys)) / span_y * 600}
              for t in g.nodes]
-    return json_safe({"color": color, "communities": int(pd.Series([n["community"] for n in nodes]).nunique()),
+    return json_safe({"color": color, "variant": variant, "communities": int(pd.Series([n["community"] for n in nodes]).nunique()),
                       "nodes": nodes, "edges": records(edges)})
 
 
@@ -263,9 +269,11 @@ def protocol():
     table = read_csv("protocolo_e1_e4/e1_e4.csv")
     data = (run_summary() or {}).get("protocolo_e1_e4", {})
     images = [name for name in ("protocolo_e1_e4/protocolo_metricas.png", "protocolo_e1_e4/particoes_pearson.png",
+                                "protocolo_e1_e4/particoes_pearson_sem_mercado.png",
                                 "protocolo_e1_e4/particoes_spearman.png") if (OUTPUT / name).is_file()]
     return json_safe({"rows": table.to_dict(orient="records"), "winners": data.get("vencedores", {}),
                       "repeats": data.get("repeticoes"), "epsilon": data.get("epsilon"),
+                      "market_mode": data.get("modo_de_mercado"),
                       "preservation": {k: v.get("preservacao_pela_arvore_ari") for k, v in data.items()
                                        if isinstance(v, dict) and "preservacao_pela_arvore_ari" in v},
                       "images": images})

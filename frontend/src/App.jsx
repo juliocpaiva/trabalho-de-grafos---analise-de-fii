@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "./api.js";
-import { experimentName, num, short } from "./format.js";
+import { experimentName, methodName, num, short } from "./format.js";
 import FundProfile from "./components/FundProfile.jsx";
 import Graph from "./components/Graph.jsx";
 import IndicatorsView from "./components/IndicatorsView.jsx";
@@ -44,6 +44,7 @@ export default function App() {
   const [relation, setRelation] = useState("direct");
   const [network, setNetwork] = useState(null);
   const [treeColor, setTreeColor] = useState("E3");
+  const [treeVariant, setTreeVariant] = useState("pearson_sem_mercado");
   const [tree, setTree] = useState(null);
   const [showDistances, setShowDistances] = useState(false);
   const [protocol, setProtocol] = useState(null);
@@ -78,7 +79,7 @@ export default function App() {
 
   useEffect(() => { load(); api.status().then(setJob).catch(() => {}); }, [load]);
   useEffect(() => { if (summary?.status === "avaliada") soft(api.network(relation), setNetwork); }, [relation, summary]);
-  useEffect(() => { if (summary?.status === "avaliada") soft(api.tree(treeColor), setTree); }, [treeColor, summary]);
+  useEffect(() => { if (summary?.status === "avaliada") soft(api.tree(treeColor, treeVariant), setTree); }, [treeColor, treeVariant, summary]);
   useEffect(() => {
     if (!selected) return;
     api.fund(selected).then(setDetail).catch(() => setDetail(null));
@@ -188,6 +189,10 @@ export default function App() {
               actions={<>
                 <Segmented label="Cores" value={treeColor} onChange={setTreeColor}
                   options={[["louvain", "Rede τ"], ["E1", "E1"], ["E2", "E2"], ["E3", "E3"], ["E4", "E4"]]} />
+                {treeColor !== "louvain" && (
+                  <select aria-label="Correlação do protocolo" value={treeVariant} onChange={(e) => setTreeVariant(e.target.value)}>
+                    {["pearson", "spearman", "pearson_sem_mercado"].map((v) => <option key={v} value={v}>{methodName(v)}</option>)}
+                  </select>)}
                 <label className="toggle-field"><input type="checkbox" checked={showDistances} onChange={(e) => setShowDistances(e.target.checked)} /> Distâncias</label>
               </>}>
               {tree ? <Graph nodes={tree.nodes} edges={tree.edges} selected={selected} onSelect={setSelected}
@@ -195,7 +200,7 @@ export default function App() {
                 : <p className="empty">Carregando árvore…</p>}
               <p className="muted small">
                 {tree?.nodes?.length} FIIs ligados por {tree?.edges?.length} arestas, sem ciclos, com a menor soma de distâncias d = √(2(1 − ρ)).
-                Cores: {treeColor === "louvain" ? "comunidades da rede com limiar" : `comunidades do ${treeColor} (${tree?.communities} grupos)`}.
+                Cores: {treeColor === "louvain" ? "comunidades da rede com limiar" : `comunidades do ${treeColor} com ${methodName(treeVariant)} (${tree?.communities} grupos)`}.
                 Troque entre E1/E2 e E3/E4 para ver o que a árvore preserva.
               </p>
             </Card>
