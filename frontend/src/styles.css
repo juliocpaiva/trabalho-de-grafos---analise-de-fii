@@ -1,0 +1,65 @@
+:root {
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  color: #142737;
+  background: #edf3f7;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+main { max-width: 1280px; margin: 0 auto; padding: 28px; }
+.topbar { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
+.topbar h1 { margin: 2px 0 0; font-size: 32px; }
+.eyebrow, .card-title p { margin: 0; color: #607695; text-transform: uppercase; letter-spacing: .12em; font-size: 11px; font-weight: 800; }
+.run-controls { display: flex; align-items: flex-end; gap: 12px; }
+.run-controls label { display: grid; gap: 5px; color: #455a6b; font-size: 12px; font-weight: 700; }
+.run-controls input, select { height: 40px; border: 1px solid #ccd8e2; border-radius: 8px; background: white; padding: 0 10px; color: #142737; }
+.run-controls input { width: 90px; }
+.run-controls button { height: 40px; border: 0; border-radius: 8px; padding: 0 16px; background: #176b79; color: white; font-weight: 800; cursor: pointer; }
+.run-controls button:disabled { opacity: .65; cursor: wait; }
+.alert { padding: 12px 14px; margin-bottom: 16px; border: 1px solid #e0aaa2; border-radius: 8px; background: #fff2ef; color: #8a3326; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 14px; }
+.kpis article, .card { border: 1px solid #dae4ec; border-radius: 12px; background: white; box-shadow: 0 8px 24px rgba(20, 39, 55, .05); }
+.kpis article { padding: 18px; display: grid; gap: 6px; }
+.kpis span { color: #607695; font-size: 12px; }
+.kpis strong { font-size: 26px; }
+.grid { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px; }
+.kruskal-layout { grid-template-columns: 1fr 1.35fr; }
+.card { min-width: 0; padding: 18px; }
+.card.full { margin-bottom: 14px; }
+.card-title { display: flex; justify-content: space-between; margin-bottom: 12px; }
+.card-title h2 { margin: 4px 0 0; font-size: 18px; }
+.network, .chart { width: 100%; max-height: 680px; }
+.edge { stroke: #71899a; stroke-width: 1; opacity: .24; }
+.node circle { stroke: white; stroke-width: 2.5; }
+.node text { fill: #142737; font-size: 9px; font-weight: 800; paint-order: stroke; stroke: white; stroke-width: 3px; }
+.mst-edge { stroke: #35586a; stroke-width: 1.35; opacity: .42; }
+.distance-label { fill: white; stroke: #ccd8e2; stroke-width: 1; }
+.distance-text { fill: #35586a; font-size: 9px; font-weight: 800; }
+.zoomable-graph { position: relative; min-width: 0; }
+.zoom-controls { position: absolute; z-index: 5; top: 8px; right: 8px; display: flex; align-items: center; gap: 5px; padding: 5px; border: 1px solid #dae4ec; border-radius: 8px; background: rgba(255,255,255,.96); box-shadow: 0 4px 14px rgba(20,39,55,.08); }
+.zoom-controls button { min-width: 32px; height: 30px; border: 1px solid #ccd8e2; border-radius: 6px; background: white; color: #176b79; font-weight: 800; cursor: pointer; }
+.zoom-controls button:last-of-type { min-width: 48px; }
+.zoom-controls button.active { background: #176b79; border-color: #176b79; color: white; }
+.zoom-controls span { min-width: 42px; text-align: center; color: #607695; font-size: 11px; font-weight: 800; }
+.kruskal-zoom { max-height: 680px; border-radius: 8px; background: #f8fafc; touch-action: none; }
+.kruskal-zoom.is-zoomed { cursor: grab; }
+.kruskal-zoom.is-zoomed:active { cursor: grabbing; }
+.profile { display: grid; grid-template-columns: 110px 1fr; gap: 10px 12px; margin: 18px 0 0; font-size: 13px; }
+.profile dt { color: #607695; }
+.profile dd { margin: 0; font-weight: 700; }
+.table-wrap { overflow: auto; max-height: 420px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid #edf2f5; }
+th { color: #607695; position: sticky; top: 0; background: white; }
+.metric-list { max-height: 380px; overflow: auto; }
+.metric-list div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #edf2f5; font-size: 12px; }
+.empty { color: #607695; }
+.grid-line { stroke: #dfe8ee; stroke-width: 1; }
+
+@media (max-width: 900px) {
+  main { padding: 18px; }
+  .topbar { align-items: flex-start; gap: 18px; flex-direction: column; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .grid { grid-template-columns: 1fr; }
+}

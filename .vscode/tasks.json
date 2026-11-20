@@ -41,6 +41,22 @@
       "args": ["coletar.py"],
       "options": {"cwd": "${workspaceFolder}"},
       "problemMatcher": []
+    },
+    {
+      "label": "FIIs: 6 - Iniciar API FastAPI",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["-m", "uvicorn", "backend.main:app", "--reload", "--host", "127.0.0.1", "--port", "8000"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "FIIs: 7 - Iniciar frontend React",
+      "type": "process",
+      "command": "C:/Program Files/nodejs/npm.cmd",
+      "args": ["run", "dev"],
+      "options": {"cwd": "${workspaceFolder}/frontend", "env": {"PATH": "C:/Program Files/nodejs;${env:PATH}"}},
+      "problemMatcher": []
     }
   ],
   "inputs": [
